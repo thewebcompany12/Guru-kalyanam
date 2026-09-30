@@ -21,7 +21,7 @@ export default function Home(){
     c.from('tasks').select('id,title,due_at,priority,schools(name)').eq('completed',false).not('due_at','is',null).order('due_at').limit(8),
     c.from('reminders').select('id,title,due_at,priority,schools(name)').eq('completed',false).order('due_at').limit(8)
    ]);
-   const errors=[s,o,v,os,p,f,t,r].filter((x:any)=>x.error); if(errors.length)setError(errors[0].error.message);
+   const errors=[s,o,v,os,p,f,t,r].filter((x:any)=>x.error); if(errors.length)setError((errors[0].error as {message:string}).message);
    const paidByOrder=new Map<string,number>(); for(const x of (p.data||[])){if(x.order_id)paidByOrder.set(x.order_id,(paidByOrder.get(x.order_id)||0)+Number(x.amount||0));}
    setUser(u.data.user);setSchools(s.count||0);setOrders(o.count||0);setVisits(v.count||0);
    setOutstanding((os.data||[]).reduce((a:any,x:any)=>a+Math.max(0,Number(x.total)-Math.max(Number(x.paid_amount||0),paidByOrder.get(x.id)||0)),0));
