@@ -2,3 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 :root{color-scheme:light}*{box-sizing:border-box}body{margin:0;background:#f6f7f9;color:#17202a;font-family:Arial,Helvetica,sans-serif}button,input{font:inherit}.card{border:1px solid #e5e7eb;background:white;border-radius:16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+
+html{min-height:100%;background:#f6f7f9}
+body{min-height:100%;-webkit-tap-highlight-color:transparent}
+button,a{touch-action:manipulation}
+button{min-height:40px}
+input,select,textarea{max-width:100%}
+.offline-banner{position:fixed;z-index:100;left:12px;right:12px;top:12px;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;padding:10px 14px;border:1px solid #f59e0b;background:#fffbeb;color:#92400e;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.08);font-size:14px}
+.offline-banner span{color:#78350f}
+@media (max-width:640px){.offline-banner{top:8px;left:8px;right:8px;font-size:13px}}
