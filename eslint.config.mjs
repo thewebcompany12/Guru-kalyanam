@@ -1,7 +1,8 @@
-import nextVitals from 'eslint-config-next/core-web-vitals.js';
+import { flatConfig } from '@next/eslint-plugin-next';
 
 export default [
-  ...nextVitals,
+  flatConfig.recommended,
+  flatConfig.coreWebVitals,
   {
     ignores: ['.next/**', 'out/**', 'build/**', 'next-env.d.ts'],
   },
