@@ -1,3 +1,9 @@
+import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import './globals.css';
-export const metadata={title:'School Supply Ops',description:'Government school supply business management'};
-export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="en"><body>{children}</body></html>}
+
+export const metadata: Metadata = { title: 'School Supply Ops', description: 'Government school supply business management' };
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return <html lang="en"><body>{children}</body></html>;
+}
