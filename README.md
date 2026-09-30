@@ -63,3 +63,9 @@ Never commit .env.local or service-role credentials.
 ## Phase 24 · Procurement
 
 Purchasing now supports supplier/product purchase creation, purchase numbering, expected-arrival tracking, procurement KPIs, payable balances, status/search filters, and responsive purchase history.
+
+
+## Phase 25 · Work Queue
+- Added a unified work queue for open tasks, reminders and unread notifications.
+- Added overdue counts, next-up work, one-tap completion and quick links into existing workspaces.
+- Added responsive mobile/desktop prioritization with refresh and explicit error states.
