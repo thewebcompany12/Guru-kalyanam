@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase';
 const items = [
   ['/', 'Dashboard', BarChart3], ['/schools', 'Schools', School], ['/visits', 'Visits', CheckSquare],
   ['/map', 'Map', Map], ['/orders', 'Orders', ClipboardList], ['/templates', 'Templates', ClipboardList], ['/products', 'Products', Package],
-  ['/inventory', 'Inventory', Package], ['/suppliers', 'Suppliers', Package], ['/purchases', 'Purchases', ClipboardList], ['/deliveries', 'Deliveries', Truck], ['/payments', 'Payments', IndianRupee], ['/reminders', 'Reminders', CheckSquare], ['/tasks', 'Tasks', CheckSquare], ['/notifications', 'Notifications', IndianRupee],
+  ['/inventory', 'Inventory', Package], ['/suppliers', 'Suppliers', Package], ['/purchases', 'Purchases', ClipboardList], ['/deliveries', 'Deliveries', Truck], ['/payments', 'Payments', IndianRupee], ['/reminders', 'Reminders', CheckSquare], ['/tasks', 'Tasks', CheckSquare], ['/notifications', 'Notifications', IndianRupee], ['/reports', 'Reports', BarChart3], ['/timeline', 'Timeline', ClipboardList],
 ];
 
 export default function AppNav() {
