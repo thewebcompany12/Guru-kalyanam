@@ -4,15 +4,37 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 
+function safeNextPath() {
+  if (typeof window === 'undefined') return '/';
+  const next = new URLSearchParams(window.location.search).get('next');
+  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email,setEmail]=useState(''),[password,setPassword]=useState('');
   const [mode,setMode]=useState<'signin'|'signup'>('signin'),[busy,setBusy]=useState(false),[error,setError]=useState('');
-  useEffect(()=>{createClient().auth.getUser().then(({data})=>{if(data.user)router.replace('/')})},[router]);
-  const submit=async(e:FormEvent)=>{e.preventDefault();setBusy(true);setError('');const c=createClient();
-    const r=mode==='signin'?await c.auth.signInWithPassword({email,password}):await c.auth.signUp({email,password,options:{data:{full_name:email.split('@')[0]}}});
-    if(r.error)setError(r.error.message);else router.replace('/');setBusy(false);
+  useEffect(()=>{createClient().auth.getUser().then(({data})=>{if(data.user)router.replace(safeNextPath())})},[router]);
+
+  const submit=async(e:FormEvent)=>{
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    const c=createClient();
+    const r=mode==='signin'
+      ? await c.auth.signInWithPassword({email,password})
+      : await c.auth.signUp({email,password,options:{data:{full_name:email.split('@')[0]}}});
+
+    if(r.error) {
+      setError(r.error.message);
+    } else if (mode === 'signup' && !r.data.session) {
+      setError('Account created. Check your email to confirm the account, then sign in.');
+    } else {
+      router.replace(safeNextPath());
+    }
+    setBusy(false);
   };
+
   return <main className="min-h-screen grid place-items-center bg-slate-50 p-4"><section className="card w-full max-w-md p-6 md:p-8">
     <h1 className="text-2xl font-bold">School Supply Ops</h1><p className="text-sm text-slate-500 mt-1 mb-7">{mode==='signin'?'Sign in to your workspace.':'Create the first workspace user.'}</p>
     <form onSubmit={submit} className="space-y-4">
