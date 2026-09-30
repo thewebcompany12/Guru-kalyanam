@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Map, School, ClipboardList, Package, Truck, IndianRupee, CheckSquare, BarChart3, LogOut, Layers3 } from 'lucide-react';
+import { Map, School, ClipboardList, Package, Truck, IndianRupee, CheckSquare, BarChart3, LogOut } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
 
 const items = [
   ['/', 'Dashboard', BarChart3], ['/schools', 'Schools', School], ['/visits', 'Visits', CheckSquare],
-  ['/map', 'Map', Map], ['/orders', 'Orders', ClipboardList], ['/templates', 'Templates', Layers3], ['/products', 'Products', Package],
+  ['/map', 'Map', Map], ['/orders', 'Orders', ClipboardList], ['/templates', 'Templates'], ['/products', 'Products', Package],
   ['/inventory', 'Inventory', Package], ['/deliveries', 'Deliveries', Truck], ['/payments', 'Payments', IndianRupee],
 ];
 
