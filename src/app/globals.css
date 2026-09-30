@@ -33,3 +33,71 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   .install-actions{width:100%}
   .install-actions button{flex:1}
 }
+
+
+/* Responsive application shell.
+   Keep the navigation layout independent of Tailwind breakpoint behavior so
+   narrow Android/iOS viewports always use a single-column content area. */
+.app-desktop-nav {
+  display: flex !important;
+  flex: 0 0 260px;
+  width: 260px;
+  min-width: 260px;
+  height: 100dvh;
+  min-height: 100dvh;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 20px;
+  background: #fff;
+  border-right: 1px solid #e5e7eb;
+}
+
+.app-mobile-nav {
+  display: none !important;
+}
+
+@media (max-width: 1023px) {
+  .app-desktop-nav {
+    display: none !important;
+  }
+
+  .app-mobile-nav {
+    display: flex !important;
+    position: fixed;
+    inset: 0 0 auto 0;
+    width: 100%;
+    min-width: 0;
+    height: 58px;
+    z-index: 80;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    padding-top: max(10px, env(safe-area-inset-top));
+    background: rgba(255,255,255,.97);
+    border-bottom: 1px solid #e5e7eb;
+    box-shadow: 0 1px 6px rgba(15,23,42,.06);
+    overflow: hidden;
+  }
+
+  .app-mobile-nav > div {
+    flex: 1 1 auto;
+  }
+
+  .app-mobile-nav + main {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-top: 74px !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-mobile-nav {
+    display: none !important;
+  }
+}
