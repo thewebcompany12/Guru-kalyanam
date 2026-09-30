@@ -1,21 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { Map, School, ClipboardList, Package, Truck, IndianRupee, CheckSquare, BarChart3, LogOut, LayoutDashboard, Users, Bell, Boxes } from 'lucide-react';
-import { createClient } from '@/lib/supabase';
+import { usePathname } from 'next/navigation';
+import { Map, School, ClipboardList, Package, Truck, IndianRupee, CheckSquare, BarChart3, LayoutDashboard, Users, Bell, Boxes } from 'lucide-react';
 
 const items = [
-  ['/', 'Dashboard', LayoutDashboard], ['/schools', 'Schools', School], ['/visits', 'Visits', CheckSquare],
-  ['/map', 'Map', Map], ['/orders', 'Orders', ClipboardList], ['/templates', 'Templates', ClipboardList], ['/products', 'Products', Package],
-  ['/inventory', 'Inventory', Boxes], ['/suppliers', 'Suppliers', Users], ['/purchases', 'Purchases', ClipboardList], ['/deliveries', 'Deliveries', Truck], ['/payments', 'Payments', IndianRupee], ['/reminders', 'Reminders', CheckSquare], ['/tasks', 'Tasks', CheckSquare], ['/notifications', 'Notifications', Bell], ['/reports', 'Reports', BarChart3], ['/timeline', 'Timeline', ClipboardList],
+  ['/', 'Dashboard', LayoutDashboard], ['/schools', 'Schools', School], ['/visits', 'Visits', CheckSquare], ['/map', 'Map', Map], ['/orders', 'Orders', ClipboardList], ['/templates', 'Templates', ClipboardList], ['/products', 'Products', Package], ['/inventory', 'Inventory', Boxes], ['/suppliers', 'Suppliers', Users], ['/purchases', 'Purchases', ClipboardList], ['/deliveries', 'Deliveries', Truck], ['/payments', 'Payments', IndianRupee], ['/reminders', 'Reminders', CheckSquare], ['/tasks', 'Tasks', CheckSquare], ['/notifications', 'Notifications', Bell], ['/reports', 'Reports', BarChart3], ['/timeline', 'Timeline', ClipboardList],
 ];
 const navColors:any={Dashboard:'bg-sky-100 text-sky-700',Schools:'bg-blue-100 text-blue-700',Visits:'bg-emerald-100 text-emerald-700',Map:'bg-cyan-100 text-cyan-700',Orders:'bg-violet-100 text-violet-700',Templates:'bg-purple-100 text-purple-700',Products:'bg-indigo-100 text-indigo-700',Inventory:'bg-teal-100 text-teal-700',Suppliers:'bg-amber-100 text-amber-700',Purchases:'bg-orange-100 text-orange-700',Deliveries:'bg-lime-100 text-lime-700',Payments:'bg-pink-100 text-pink-700',Reminders:'bg-yellow-100 text-yellow-700',Tasks:'bg-green-100 text-green-700',Notifications:'bg-rose-100 text-rose-700',Reports:'bg-fuchsia-100 text-fuchsia-700',Timeline:'bg-slate-100 text-slate-700'};
 
-export default function AppNav(){ const pathname=usePathname(); const router=useRouter(); const signOut=async()=>{await createClient().auth.signOut();router.push('/login');router.refresh()}; return <>
-<aside className="app-desktop-nav"><Link href="/" className="brand-mark"><span className="brand-logo"><School size={20}/></span><span><b>School Supply</b><small>Operations</small></span></Link><div className="nav-label">WORKSPACE</div><nav className="space-y-1 overflow-y-auto min-h-0">
-{items.map(([href,label,Icon]:any)=>{const active=pathname===href||(href!=='/'&&pathname.startsWith(href));return <Link key={href} href={href} className={['nav-item',active?'nav-item-active':''].join(' ')}><span className={['nav-item-icon',active?(navColors[label as string]||'bg-emerald-100 text-emerald-700'):''].join(' ')}><Icon size={17}/></span><span className="truncate">{label}</span></Link>})}
-</nav><button onClick={signOut} className="nav-signout"><span className="nav-item-icon bg-slate-100 text-slate-600"><LogOut size={17}/></span><span>Sign out</span></button></aside>
-<div className="app-mobile-nav"><Link href="/" className="mobile-brand"><span className="brand-logo"><School size={18}/></span><b>Supply Ops</b></Link><div className="mobile-nav-scroll">
-{items.slice(0,6).map(([href,label,Icon]:any)=>{const active=pathname===href||(href!=='/'&&pathname.startsWith(href));return <Link key={href} href={href} aria-label={label} title={label} className={['mobile-nav-item',active?'mobile-nav-active':''].join(' ')}><Icon size={18}/><span>{label}</span></Link>})}
-</div></div></> }
+export default function AppNav(){const pathname=usePathname();return <>
+<aside className="app-desktop-nav"><Link href="/" className="brand-mark"><span className="brand-logo"><School size={20}/></span><span><b>School Supply</b><small>Personal workspace</small></span></Link><div className="nav-label">WORKSPACE</div><nav className="space-y-1 overflow-y-auto min-h-0">{items.map(([href,label,Icon]:any)=>{const active=pathname===href||(href!=='/'&&pathname.startsWith(href));return <Link key={href} href={href} className={['nav-item',active?'nav-item-active':''].join(' ')}><span className={['nav-item-icon',active?(navColors[label as string]||'bg-emerald-100 text-emerald-700'):''].join(' ')}><Icon size={17}/></span><span className="truncate">{label}</span></Link>})}</nav><div className="workspace-badge"><span className="workspace-dot"/>Single-user mode</div></aside>
+<div className="app-mobile-nav"><Link href="/" className="mobile-brand"><span className="brand-logo"><School size={18}/></span><b>Supply Ops</b></Link><div className="mobile-nav-scroll">{items.slice(0,6).map(([href,label,Icon]:any)=>{const active=pathname===href||(href!=='/'&&pathname.startsWith(href));return <Link key={href} href={href} aria-label={label} title={label} className={['mobile-nav-item',active?'mobile-nav-active':''].join(' ')}><Icon size={18}/><span>{label}</span></Link>})}</div></div></>;}
