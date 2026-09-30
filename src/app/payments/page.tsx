@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase';
 
 type School={id:string;name:string};
 type Order={id:string;order_number:number;school_id:string;total:number;payment_status:string;order_date:string};
-type Payment={id:string;school_id:string;order_id:string|null;amount:number;payment_date:string;payment_mode:string;reference_number:string|null;notes:string|null;schools?:{name:string}|null};
+type Payment={id:string;school_id:string;order_id:string|null;amount:number;payment_date:string;payment_mode:string;reference_number:string|null;notes:string|null};
 
 const modes=['CASH','UPI','BANK_TRANSFER','CHEQUE','OTHER'];
 const money=(n:number)=>'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -22,7 +22,7 @@ export default function PaymentsPage(){
    const [s,o,p]=await Promise.all([
      supabase.from('schools').select('id,name').order('name'),
      supabase.from('orders').select('id,order_number,school_id,total,payment_status,order_date').order('created_at',{ascending:false}),
-     supabase.from('payments').select('id,school_id,order_id,amount,payment_date,payment_mode,reference_number,notes,schools(name)').order('payment_date',{ascending:false}).order('created_at',{ascending:false}).limit(200)
+     supabase.from('payments').select('id,school_id,order_id,amount,payment_date,payment_mode,reference_number,notes').order('payment_date',{ascending:false}).order('created_at',{ascending:false}).limit(200)
    ]);
    const e=s.error||o.error||p.error;
    if(e) setError(e.message);
@@ -90,7 +90,7 @@ export default function PaymentsPage(){
      </section>
      <section className="card p-4">
        <div className="flex flex-col md:flex-row gap-2 mb-4"><input className="flex-1 border rounded-xl px-3 py-2" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search school, reference or note…"/><select className="border rounded-xl px-3 py-2" value={school} onChange={e=>setSchool(e.target.value)}><option value="">All schools</option>{schools.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select><select className="border rounded-xl px-3 py-2" value={modeFilter} onChange={e=>setModeFilter(e.target.value)}><option value="">All modes</option>{modes.map(x=><option key={x}>{x}</option>)}</select><button className="border rounded-xl px-3 py-2" onClick={load}>Refresh</button></div>
-       {loading?<p className="py-12 text-center text-slate-500">Loading payments…</p>:visible.length===0?<p className="py-12 text-center text-slate-500">No payments match these filters.</p>:<div className="space-y-2">{visible.map(r=><div key={r.id} className="border rounded-xl p-4"><div className="flex justify-between gap-3"><div><b>{r.schools?.name||'School'}</b><p className="text-sm text-slate-500">{r.payment_date} · {r.payment_mode}</p></div><b className="text-emerald-700">{money(Number(r.amount))}</b></div>{r.reference_number&&<p className="text-sm mt-2">Ref: {r.reference_number}</p>}{r.notes&&<p className="text-sm text-slate-500 mt-1">{r.notes}</p>}</div>)}</div>}
+       {loading?<p className="py-12 text-center text-slate-500">Loading payments…</p>:visible.length===0?<p className="py-12 text-center text-slate-500">No payments match these filters.</p>:<div className="space-y-2">{visible.map(r=><div key={r.id} className="border rounded-xl p-4"><div className="flex justify-between gap-3"><div><b>{schoolNames.get(r.school_id)||'School'}</b><p className="text-sm text-slate-500">{r.payment_date} · {r.payment_mode}</p></div><b className="text-emerald-700">{money(Number(r.amount))}</b></div>{r.reference_number&&<p className="text-sm mt-2">Ref: {r.reference_number}</p>}{r.notes&&<p className="text-sm text-slate-500 mt-1">{r.notes}</p>}</div>)}</div>}
      </section>
    </div>
  </div></main></div>
