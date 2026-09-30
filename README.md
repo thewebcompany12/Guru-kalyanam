@@ -20,3 +20,9 @@ Next.js + TypeScript + Tailwind CSS + Supabase PostgreSQL/Auth + Vercel.
 4. npm run dev
 
 Never commit .env.local or service-role credentials.
+
+## Phase 12
+- Follow-up Planner for overdue, today, upcoming, and unscheduled schools
+- Visit form can schedule the next school follow-up date
+- Follow-up dates persist on `schools.next_follow_up_at`
+- One-tap follow-up reminders and visit shortcuts
