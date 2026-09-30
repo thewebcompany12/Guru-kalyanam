@@ -26,3 +26,5 @@ Never commit .env.local or service-role credentials.
 - Visit form can schedule the next school follow-up date
 - Follow-up dates persist on `schools.next_follow_up_at`
 - One-tap follow-up reminders and visit shortcuts
+
+- Latest Phase 12 implementation verified on the production deployment pipeline.
