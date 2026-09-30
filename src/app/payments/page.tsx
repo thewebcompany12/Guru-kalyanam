@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase';
 
 type School={id:string;name:string};
 type Order={id:string;order_number:number;school_id:string;total:number;payment_status:string;order_date:string};
-type Payment={id:string;school_id:string;order_id:string|null;amount:number;payment_date:string;payment_mode:string;reference_number:string|null;notes:string|null;schools?:{name:string}};
+type Payment={id:string;school_id:string;order_id:string|null;amount:number;payment_date:string;payment_mode:string;reference_number:string|null;notes:string|null;schools?:{name:string}|null};
 
 const modes=['CASH','UPI','BANK_TRANSFER','CHEQUE','OTHER'];
 const money=(n:number)=>'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
