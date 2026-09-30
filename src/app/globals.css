@@ -101,3 +101,5 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
     display: none !important;
   }
 }
+
+/* Mobile shell deployment verification: keep the app content full-width below 1024px. */
