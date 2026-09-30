@@ -18,7 +18,7 @@ export default function Reports(){
   c.from('purchases').select('total,paid_amount,status,purchase_date,suppliers(name)').order('purchase_date',{ascending:false}),
   c.from('inventory').select('available_stock,incoming_stock,reserved_stock,products(name,sku)'),
   c.from('school_visits').select('started_at,ended_at,school_id,schools(name)').order('started_at',{ascending:false}).limit(500)
- ]);const bad=[o,p,d,pu,i,sv].find(x=>x.error);if(bad)setError(bad.error.message);setData({orders:o.data||[],payments:p.data||[],deliveries:d.data||[],purchases:pu.data||[],inventory:i.data||[],visits:sv.data||[]});setLoading(false)};
+ ]);const bad:any=[o,p,d,pu,i,sv].find((x:any)=>x?.error);if(bad)setError(bad.error.message);setData({orders:o.data||[],payments:p.data||[],deliveries:d.data||[],purchases:pu.data||[],inventory:i.data||[],visits:sv.data||[]});setLoading(false)};
  useEffect(()=>{load()},[]);
  const inRange=(value:string)=>{const day=value?.slice(0,10);return (!from||day>=from)&&(!to||day<=to)};
  const orders=useMemo(()=>data.orders.filter((x:any)=>inRange(x.order_date)),[data.orders,from,to]);
