@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CalendarDays, CheckCircle2, Clock3, LocateFixed, MapPin, Navigation, Play, Search, Square, UserRound, X } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Clock3, LocateFixed, MapPin, Navigation, Play, Search, Square, X } from 'lucide-react';
 import AppNav from '@/components/AppNav';
 import { createClient } from '@/lib/supabase';
 
@@ -13,6 +13,7 @@ const emptyForm = {
   order_received: false,
   payment_collected: false,
   follow_up_required: false,
+  follow_up_date: '',
 };
 
 const formatDate=(value:string)=>new Date(value).toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'});
@@ -78,7 +79,10 @@ export default function VisitsPage(){
        follow_up_required:form.follow_up_required
      }).select().single();
      if(r.error){setError(r.error.message);setSaving(false);return}
-     await client.from('schools').update({last_visit_at:new Date().toISOString()}).eq('id',schoolId);
+     const schoolUpdate:any={last_visit_at:new Date().toISOString()};
+     if(form.follow_up_required&&form.follow_up_date)schoolUpdate.next_follow_up_at=new Date(form.follow_up_date+'T09:00:00').toISOString();
+     else if(!form.follow_up_required)schoolUpdate.next_follow_up_at=null;
+     await client.from('schools').update(schoolUpdate).eq('id',schoolId);
      setSchoolId('');setForm(emptyForm);await load();setSaving(false);
    };
    if(navigator.geolocation){
@@ -133,6 +137,7 @@ export default function VisitsPage(){
         <input value={form.person_met} onChange={e=>setForm({...form,person_met:e.target.value})} placeholder="Person met (e.g. Principal)" className="rounded-xl border px-3 py-3"/>
         <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Notes: what happened, what was discussed…" className="rounded-xl border px-3 py-3 md:row-span-2"/>
       </div>
+      {form.follow_up_required&&<label className="mt-3 block text-sm font-medium">Next follow-up date<input type="date" value={form.follow_up_date} onChange={e=>setForm({...form,follow_up_date:e.target.value})} className="mt-1 w-full rounded-xl border px-3 py-3"/><span className="text-xs text-slate-500">Saved on the school and shown in Follow-up Planner.</span></label>}
       <div className="flex flex-wrap gap-2 mt-3">
         {([['order_received','Order received'],['payment_collected','Payment collected'],['follow_up_required','Follow-up needed']] as const).map(([key,label])=><label key={key} className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-2 text-sm"><input type="checkbox" checked={form[key]} onChange={e=>setForm({...form,[key]:e.target.checked})} className="h-4 w-4"/>{label}</label>)}
       </div>
