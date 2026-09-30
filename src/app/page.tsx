@@ -1,4 +1,5 @@
 'use client';
+// Phase 14 CI verification
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
