@@ -144,3 +144,5 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .mobile-nav-item{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;min-height:38px;padding:7px 10px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;color:#64748b;font-size:11px;font-weight:700}
 .mobile-nav-active{background:#ecfdf5;border-color:#a7f3d0;color:#047857}
 @media (max-width:640px){.dashboard-hero{border-radius:20px}.metric-card{padding:13px}.quick-action{min-height:64px;padding:10px}.quick-icon{width:34px;height:34px;flex-basis:34px;border-radius:10px}}
+
+/* Production deployment retry after Vercel build-rate-limit cooldown. */
