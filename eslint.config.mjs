@@ -1,4 +1,6 @@
-import { flatConfig } from '@next/eslint-plugin-next';
+import nextPlugin from '@next/eslint-plugin-next';
+
+const { flatConfig } = nextPlugin;
 
 export default [
   flatConfig.recommended,
