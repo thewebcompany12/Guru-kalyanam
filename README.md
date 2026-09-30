@@ -47,3 +47,7 @@ Never commit .env.local or service-role credentials.
 - Upgraded Deliveries into a fulfillment management workspace.
 - Added delivery status dashboard, scheduling date/time, responsible-user assignment, notes, search and status filters.
 - Added delivery completion timestamps and responsive mobile/desktop controls.
+
+
+## Phase 22
+- Upgraded Inventory into a stock-control workspace with stock KPIs, low/out-of-stock filters, product search, typed stock movements, notes, refresh/error states, and recent movement history.
