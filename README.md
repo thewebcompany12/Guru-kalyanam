@@ -41,3 +41,9 @@ Never commit .env.local or service-role credentials.
 - Upgraded the activity timeline into a searchable, filterable audit trail.
 - Added action and entity filters, refresh, event counts, actor/entity identifiers, and expandable before/after field changes.
 - Timeline now handles loading and database error states explicitly.
+
+
+## Phase 21
+- Upgraded Deliveries into a fulfillment management workspace.
+- Added delivery status dashboard, scheduling date/time, responsible-user assignment, notes, search and status filters.
+- Added delivery completion timestamps and responsive mobile/desktop controls.
