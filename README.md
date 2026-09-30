@@ -28,3 +28,10 @@ Never commit .env.local or service-role credentials.
 - One-tap follow-up reminders and visit shortcuts
 
 - Latest Phase 12 implementation verified on the production deployment pipeline.
+
+
+## Phase 19
+- Global search across schools, products, and order numbers.
+- Search is available from desktop and mobile navigation.
+- `/` focuses search from anywhere outside form fields.
+- Results deep-link directly into the relevant record.
