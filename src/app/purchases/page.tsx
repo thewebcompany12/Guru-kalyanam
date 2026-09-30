@@ -4,15 +4,12 @@ import { useEffect, useMemo, useState } from 'react';
 import AppNav from '@/components/AppNav';
 import { createClient } from '@/lib/supabase';
 
-type Supplier={id:string;name:string;company:string|null;phone:string|null;outstanding_amount:number};
-type Product={id:string;name:string;sku:string|null;unit:string|null;purchase_price:number};
-type Purchase={id:string;purchase_number:number;supplier_id:string;purchase_date:string;expected_arrival_date:string|null;status:string;total:number;paid_amount:number;notes:string|null};
 const money=(n:number)=>'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const statuses=['ORDERED','RECEIVED','PARTIAL','CANCELLED'];
 
 export default function PurchasesPage(){
  const supabase=createClient();
- const [suppliers,setSuppliers]=useState<Supplier[]>([]),[products,setProducts]=useState<Product[]>([]),[rows,setRows]=useState<Purchase[]>([]);
+ const [suppliers,setSuppliers]=useState<any[]>([]),[products,setProducts]=useState<any[]>([]),[rows,setRows]=useState<any[]>([]);
  const [supplier,setSupplier]=useState(''),[product,setProduct]=useState(''),[qty,setQty]=useState('1'),[cost,setCost]=useState('0'),[date,setDate]=useState(new Date().toISOString().slice(0,10)),[arrival,setArrival]=useState(''),[notes,setNotes]=useState('');
  const [query,setQuery]=useState(''),[status,setStatus]=useState(''),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState('');
 
@@ -24,7 +21,7 @@ export default function PurchasesPage(){
    supabase.from('purchases').select('id,purchase_number,supplier_id,purchase_date,expected_arrival_date,status,total,paid_amount,notes').order('purchase_date',{ascending:false}).order('created_at',{ascending:false}).limit(200)
   ]);
   const e=s.error||p.error||r.error;if(e)setError(e.message);
-  setSuppliers((s.data||[]) as Supplier[]);setProducts((p.data||[]) as Product[]);setRows((r.data||[]) as Purchase[]);setLoading(false);
+  setSuppliers(s.data||[]);setProducts(p.data||[]);setRows(r.data||[]);setLoading(false);
  };
  useEffect(()=>{load()},[]);
  const selected=products.find(p=>p.id===product);
