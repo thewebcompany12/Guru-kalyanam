@@ -159,3 +159,21 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .card{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
 .card:hover{box-shadow:0 10px 24px rgba(15,23,42,.06)}
 @media (prefers-reduced-motion:reduce){.animate-fade-up,.animate-soft-bounce,.animate-loading-bar{animation:none}.card,.nav-item,.quick-action,.metric-card{transition:none}}
+
+
+/* Phase 11 mobile-first hardening */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+@media(max-width:1023px){
+  body{min-width:0}
+  .app-mobile-nav{height:62px;overflow:hidden}
+  .app-mobile-nav + main{box-sizing:border-box;width:100%!important;min-width:0!important;max-width:100vw!important;padding-left:12px!important;padding-right:12px!important;padding-top:78px!important;overflow-x:hidden}
+  .app-mobile-nav + main > div{width:100%;max-width:100%;min-width:0}
+  .app-mobile-nav + main h1{font-size:1.7rem;line-height:1.15}
+  .app-mobile-nav + main .card{max-width:100%;overflow:hidden}
+  .app-mobile-nav + main input,.app-mobile-nav + main select,.app-mobile-nav + main textarea{width:100%;min-width:0}
+}
+@media(max-width:480px){
+  .mobile-brand b{display:none}
+  .mobile-nav-scroll{gap:5px}
+  .mobile-nav-item{min-height:36px;padding:6px 8px;font-size:10px}
+}
