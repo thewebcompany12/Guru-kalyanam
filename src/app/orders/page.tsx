@@ -1,0 +1,46 @@
+'use client';
+
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import AppNav from '@/components/AppNav';
+import { createClient } from '@/lib/supabase';
+
+type School={id:string;name:string};
+type Contact={id:string;school_id:string;name:string};
+type Product={id:string;name:string;unit:string;selling_price:number;tax_rate:number};
+type Template={id:string;name:string};
+type Item={product_id:string|null;product_name:string;quantity:number;unit:string;unit_price:number;discount:number;tax_rate:number;custom_item:boolean};
+type Order={id:string;order_number:number;school_id:string;order_date:string;expected_delivery_date:string|null;status:string;payment_status:string;total:number;school?:{name:string}};
+
+const statuses=['NEW','CONFIRMED','PREPARING','READY','OUT_FOR_DELIVERY','DELIVERED','PARTIALLY_DELIVERED','CANCELLED'];
+const emptyItem=():Item=>({product_id:null,product_name:'',quantity:1,unit:'piece',unit_price:0,discount:0,tax_rate:0,custom_item:true});
+
+export default function OrdersPage(){
+ const supabase=createClient();
+ const [orders,setOrders]=useState<Order[]>([]),[schools,setSchools]=useState<School[]>([]),[contacts,setContacts]=useState<Contact[]>([]),[products,setProducts]=useState<Product[]>([]),[templates,setTemplates]=useState<Template[]>([]);
+ const [schoolId,setSchoolId]=useState(''),[contactId,setContactId]=useState(''),[date,setDate]=useState(new Date().toISOString().slice(0,10)),[expected,setExpected]=useState(''),[notes,setNotes]=useState(''),[items,setItems]=useState<Item[]>([emptyItem()]),[templateId,setTemplateId]=useState(''),[filter,setFilter]=useState(''),[error,setError]=useState(''),[saving,setSaving]=useState(false);
+ const load=async()=>{const [o,s,p,t,c]=await Promise.all([
+  supabase.from('orders').select('id,order_number,school_id,order_date,expected_delivery_date,status,payment_status,total,school:schools(name)').order('created_at',{ascending:false}),
+  supabase.from('schools').select('id,name').order('name'),supabase.from('products').select('id,name,unit,selling_price,tax_rate').eq('active',true).order('name'),
+  supabase.from('order_templates').select('id,name').order('name'),supabase.from('school_contacts').select('id,school_id,name').order('name')
+ ]);setOrders((o.data||[]) as Order[]);setSchools((s.data||[]) as School[]);setProducts((p.data||[]) as Product[]);setTemplates((t.data||[]) as Template[]);setContacts((c.data||[]) as Contact[]);};
+ useEffect(()=>{load()},[]);
+ const schoolContacts=contacts.filter(c=>c.school_id===schoolId);
+ const total=useMemo(()=>items.reduce((sum,i)=>sum+Math.max(0,i.quantity*i.unit_price-i.discount)*(1+i.tax_rate/100),0),[items]);
+ const setProduct=(idx:number,id:string)=>{const p=products.find(x=>x.id===id);const next=[...items];next[idx]={...next[idx],product_id:id||null,product_name:p?.name||'',unit:p?.unit||'piece',unit_price:Number(p?.selling_price||0),tax_rate:Number(p?.tax_rate||0),custom_item:!id};setItems(next)};
+ const applyTemplate=async(id:string)=>{setTemplateId(id);if(!id)return;const {data}=await supabase.from('order_template_items').select('*').eq('template_id',id).order('sort_order');setItems(((data||[]) as any[]).map(i=>({product_id:i.product_id,product_name:i.product_name,quantity:Number(i.default_quantity),unit:i.unit,unit_price:Number(i.default_price),discount:0,tax_rate:Number(products.find(p=>p.id===i.product_id)?.tax_rate||0),custom_item:!i.product_id})));};
+ const save=async(e:FormEvent)=>{e.preventDefault();setError('');if(!schoolId){setError('Select a school.');return;}const valid=items.filter(i=>i.product_name.trim()&&i.quantity>0);if(!valid.length){setError('Add at least one valid item.');return;}setSaving(true);
+  const {data,error:e2}=await supabase.rpc('create_order',{p_school_id:schoolId,p_contact_id:contactId||null,p_order_date:date,p_expected_delivery_date:expected||null,p_notes:notes,p_items:valid});setSaving(false);if(e2){setError(e2.message);return;}setItems([emptyItem()]);setSchoolId('');setContactId('');setExpected('');setNotes('');setTemplateId('');await load();if(data)window.location.href='/orders/'+data;
+ };
+ const visible=filter?orders.filter(o=>o.status===filter):orders;
+ return <div className="min-h-screen flex bg-slate-50"><AppNav/><main className="flex-1 p-4 md:p-8"><div className="max-w-7xl mx-auto">
+ <header className="mb-6"><p className="text-sm text-slate-500">Phase 3 · Sales pipeline</p><h1 className="text-3xl font-bold">Orders</h1><p className="text-slate-500 mt-1">Create orders from products or reusable templates, then move them through the pipeline.</p></header>
+ <div className="grid xl:grid-cols-[440px_1fr] gap-5">
+ <form onSubmit={save} className="card p-5 space-y-3"><h2 className="font-bold">New order</h2><select className="w-full border rounded-xl px-3 py-2" value={schoolId} onChange={e=>{setSchoolId(e.target.value);setContactId('')}}><option value="">Select school…</option>{schools.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select><select className="w-full border rounded-xl px-3 py-2" value={contactId} onChange={e=>setContactId(e.target.value)} disabled={!schoolId}><option value="">Contact (optional)</option>{schoolContacts.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
+ <div className="grid grid-cols-2 gap-2"><label className="text-sm">Order date<input className="w-full mt-1 border rounded-xl px-3 py-2" type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><label className="text-sm">Expected delivery<input className="w-full mt-1 border rounded-xl px-3 py-2" type="date" value={expected} onChange={e=>setExpected(e.target.value)}/></label></div>
+ <select className="w-full border rounded-xl px-3 py-2" value={templateId} onChange={e=>applyTemplate(e.target.value)}><option value="">Use template…</option>{templates.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select>
+ <div className="space-y-2">{items.map((it,idx)=><div key={idx} className="border rounded-xl p-3 space-y-2"><div className="flex gap-2"><select className="flex-1 border rounded-lg px-2 py-2" value={it.product_id||''} onChange={e=>setProduct(idx,e.target.value)}><option value="">Custom item…</option>{products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>{items.length>1&&<button type="button" onClick={()=>setItems(items.filter((_,i)=>i!==idx))} className="text-red-600 px-2">×</button>}</div><div className="grid grid-cols-3 gap-2"><input className="border rounded-lg px-2 py-2" type="number" min="0.01" step="0.01" value={it.quantity} onChange={e=>{const x=[...items];x[idx]={...x[idx],quantity:Number(e.target.value)};setItems(x)}} placeholder="Qty"/><input className="border rounded-lg px-2 py-2" type="number" min="0" step="0.01" value={it.unit_price} onChange={e=>{const x=[...items];x[idx]={...x[idx],unit_price:Number(e.target.value)};setItems(x)}} placeholder="Price"/><input className="border rounded-lg px-2 py-2" type="number" min="0" step="0.01" value={it.tax_rate} onChange={e=>{const x=[...items];x[idx]={...x[idx],tax_rate:Number(e.target.value)};setItems(x)}} placeholder="Tax %"/></div>{!it.product_id&&<input className="w-full border rounded-lg px-2 py-2" placeholder="Custom item name" value={it.product_name} onChange={e=>{const x=[...items];x[idx]={...x[idx],product_name:e.target.value};setItems(x)}}/>}</div>)}<button type="button" onClick={()=>setItems([...items,emptyItem()])} className="border rounded-xl px-3 py-2 text-sm">+ Add item</button></div>
+ <textarea className="w-full border rounded-xl px-3 py-2" placeholder="Notes" value={notes} onChange={e=>setNotes(e.target.value)}/><div className="flex justify-between font-bold"><span>Estimated total</span><span>₹{total.toFixed(2)}</span></div>{error&&<p className="text-sm text-red-600">{error}</p>}<button disabled={saving} className="w-full bg-emerald-600 disabled:opacity-50 text-white rounded-xl py-3 font-semibold">{saving?'Saving…':'Create order'}</button></form>
+ <section className="card p-4"><div className="flex gap-2 overflow-x-auto mb-4"><button onClick={()=>setFilter('')} className={'rounded-full px-3 py-1.5 text-sm '+(!filter?'bg-slate-900 text-white':'border')}>All</button>{statuses.map(s=><button key={s} onClick={()=>setFilter(s)} className={'rounded-full px-3 py-1.5 text-xs whitespace-nowrap '+(filter===s?'bg-emerald-600 text-white':'border')}>{s.replaceAll('_',' ')}</button>)}</div>{visible.length===0?<p className="py-12 text-center text-slate-500">No orders yet.</p>:<div className="space-y-2">{visible.map(o=><Link href={'/orders/'+o.id} key={o.id} className="block border rounded-xl p-4 hover:bg-slate-50"><div className="flex justify-between gap-3"><div><b>Order #{o.order_number}</b><p className="text-sm text-slate-600">{o.school?.name||'School'} · {o.order_date}</p></div><div className="text-right"><span className="text-xs border rounded-full px-2 py-1">{o.status.replaceAll('_',' ')}</span><p className="font-semibold mt-2">₹{Number(o.total).toFixed(2)}</p></div></div></Link>)}</div>}</section>
+ </div></div></main></div>;
+}
