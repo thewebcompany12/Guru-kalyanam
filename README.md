@@ -35,3 +35,9 @@ Never commit .env.local or service-role credentials.
 - Search is available from desktop and mobile navigation.
 - `/` focuses search from anywhere outside form fields.
 - Results deep-link directly into the relevant record.
+
+
+## Phase 20
+- Upgraded the activity timeline into a searchable, filterable audit trail.
+- Added action and entity filters, refresh, event counts, actor/entity identifiers, and expandable before/after field changes.
+- Timeline now handles loading and database error states explicitly.
