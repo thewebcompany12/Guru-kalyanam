@@ -58,3 +58,8 @@ Never commit .env.local or service-role credentials.
 - Added order-level balance tracking, payment-mode filters, school/search filters, references and notes.
 - Recording an order payment synchronizes the order paid amount and payment status.
 - Added responsive loading, error, empty and refresh states.
+
+
+## Phase 24 · Procurement
+
+Purchasing now supports supplier/product purchase creation, purchase numbering, expected-arrival tracking, procurement KPIs, payable balances, status/search filters, and responsive purchase history.
