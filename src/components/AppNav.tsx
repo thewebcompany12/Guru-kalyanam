@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase';
 
 const items = [
   ['/', 'Dashboard', BarChart3], ['/schools', 'Schools', School], ['/visits', 'Visits', CheckSquare],
-  ['/map', 'Map', Map], ['/orders', 'Orders', ClipboardList], ['/templates', 'Templates'], ['/products', 'Products', Package],
+  ['/map', 'Map', Map], ['/orders', 'Orders', ClipboardList], ['/templates', 'Templates', ClipboardList], ['/products', 'Products', Package],
   ['/inventory', 'Inventory', Package], ['/deliveries', 'Deliveries', Truck], ['/payments', 'Payments', IndianRupee],
 ];
 
