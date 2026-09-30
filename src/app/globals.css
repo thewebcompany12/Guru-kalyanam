@@ -146,3 +146,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 @media (max-width:640px){.dashboard-hero{border-radius:20px}.metric-card{padding:13px}.quick-action{min-height:64px;padding:10px}.quick-icon{width:34px;height:34px;flex-basis:34px;border-radius:10px}}
 
 /* Production deployment retry after Vercel build-rate-limit cooldown. */
+
+/* Motion and touch polish */
+@keyframes fade-up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes soft-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes loading-bar{from{transform:translateX(-120%)}to{transform:translateX(220%)}}
+.animate-fade-up{animation:fade-up .32s ease-out both}
+.animate-soft-bounce{animation:soft-bounce 1.8s ease-in-out infinite}
+.animate-loading-bar{animation:loading-bar 1.15s ease-in-out infinite}
+.workspace-badge{display:flex;align-items:center;gap:8px;margin-top:12px;padding:9px 10px;border:1px solid #dbeafe;border-radius:12px;background:#eff6ff;color:#2563eb;font-size:11px;font-weight:700}
+.workspace-dot{width:7px;height:7px;border-radius:999px;background:#22c55e;box-shadow:0 0 0 4px #dcfce7}
+.card{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.card:hover{box-shadow:0 10px 24px rgba(15,23,42,.06)}
+@media (prefers-reduced-motion:reduce){.animate-fade-up,.animate-soft-bounce,.animate-loading-bar{animation:none}.card,.nav-item,.quick-action,.metric-card{transition:none}}
