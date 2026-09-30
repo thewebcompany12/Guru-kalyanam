@@ -6,7 +6,7 @@ import { ArrowRight, BarChart3, Bell, Boxes, CalendarClock, CalendarCheck, Check
 import AppNav from '@/components/AppNav';
 import { createClient } from '@/lib/supabase';
 
-type QueueRow={id:string;title:string;due_at:string;kind:'task'|'reminder';priority:string;school?:{name?:string}|null};
+type QueueRow={id:string;title:string;due_at:string;kind:'task'|'reminder';priority:string;schools?:{name?:string}|null};
 
 export default function Home(){
  const [user,setUser]=useState<any>(null),[schools,setSchools]=useState(0),[orders,setOrders]=useState(0),[visits,setVisits]=useState(0),[outstanding,setOutstanding]=useState(0);
