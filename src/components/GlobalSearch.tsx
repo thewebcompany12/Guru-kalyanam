@@ -29,7 +29,7 @@ export default function GlobalSearch(){
   },[]);
 
   useEffect(()=>{
-    const q=query.trim();
+    const q=query.trim().replace(/[,%()]/g,' ').replace(/\s+/g,' ');
     if(q.length<2){setResults([]);setError('');setLoading(false);return;}
     const timer=window.setTimeout(async()=>{
       setLoading(true);setError('');
