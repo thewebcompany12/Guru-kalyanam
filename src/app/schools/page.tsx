@@ -18,7 +18,12 @@ export default function SchoolsPage(){
  const locate=()=>navigator.geolocation?.getCurrentPosition(p=>setForm((f:any)=>({...f,latitude:p.coords.latitude.toFixed(7),longitude:p.coords.longitude.toFixed(7)})),e=>setError(e.message),{enableHighAccuracy:true});
  const save=async(e:any)=>{e.preventDefault();setSaving(true);setError('');
    const payload={name:form.name.trim(),udise_code:form.udise_code||null,address:form.address||null,district:form.district||null,state:form.state||null,school_type:form.school_type,principal_name:form.principal_name||null,latitude:form.latitude?Number(form.latitude):null,longitude:form.longitude?Number(form.longitude):null};
-   const r=editing?await client.from('schools').update(payload).eq('id',editing):await client.from('schools').insert(payload);
+   const r=editing?await client.from('schools').update(payload).eq('id',editing):await client.from('schools').insert(payload).select('id').single();
+   const savedId=editing||r.data?.id;
+   if(!r.error&&savedId&&form.latitude&&form.longitude){
+     await client.from('locations').update({is_current:false}).eq('school_id',savedId);
+     await client.from('locations').insert({school_id:savedId,latitude:Number(form.latitude),longitude:Number(form.longitude),captured_at:new Date().toISOString(),source:'school_form',is_current:true});
+   }
    if(r.error)setError(r.error.message);else{setForm(empty);setEditing(null);await load()}setSaving(false);
  };
  const remove=async(id:string)=>{if(!confirm('Delete this school and its related records?'))return;const r=await client.from('schools').delete().eq('id',id);if(r.error)setError(r.error.message);else load()};
@@ -31,7 +36,7 @@ export default function SchoolsPage(){
     <label className="block text-sm font-medium">School type<select value={form.school_type} onChange={e=>setForm({...form,school_type:e.target.value})} className="mt-1 w-full rounded-xl border px-3 py-2.5"><option>PRIMARY</option><option>UPPER_PRIMARY</option><option>SECONDARY</option><option>SENIOR_SECONDARY</option><option>OTHER</option></select></label>
     <div className="grid grid-cols-2 gap-2"><input placeholder="Latitude" value={form.latitude} onChange={e=>setForm({...form,latitude:e.target.value})} className="rounded-xl border px-3 py-2.5"/><input placeholder="Longitude" value={form.longitude} onChange={e=>setForm({...form,longitude:e.target.value})} className="rounded-xl border px-3 py-2.5"/></div>
     <button type="button" onClick={locate} className="w-full rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 py-2.5 flex justify-center gap-2 items-center transition hover:-translate-y-0.5"><LocateFixed size={17}/>Use current location</button>
-    <p className="text-xs text-slate-500">GPS coordinates are saved with the school when you tap Save school.</p>
+    <p className="text-xs text-slate-500">GPS coordinates are saved with the school and a location history record is kept when you tap Save school.</p>
     <div className="flex gap-2"><button disabled={saving} className="flex-1 rounded-xl bg-slate-900 text-white py-2.5 transition hover:-translate-y-0.5">{saving?'Saving…':editing?'Update':'Save school'}</button>{editing&&<button type="button" onClick={()=>{setForm(empty);setEditing(null)}} className="rounded-xl border px-4">Cancel</button>}</div>
    </form>
    <section><div className="card p-3 mb-4 flex items-center gap-2 animate-fade-up"><Search size={18} className="text-slate-400"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search schools, UDISE, district…" className="w-full outline-none"/></div>
