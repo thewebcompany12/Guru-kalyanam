@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import './globals.css';
 import PWARegister from '@/components/PWARegister';
 import OfflineBanner from '@/components/OfflineBanner';
+import InstallPrompt from '@/components/InstallPrompt';
 
 export const metadata: Metadata = {
   title: 'School Supply Ops',
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <PWARegister />
         <OfflineBanner />
+        <InstallPrompt />
         {children}
       </body>
     </html>
