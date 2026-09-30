@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Map, School, ClipboardList, Package, Truck, IndianRupee, CheckSquare, BarChart3, LogOut } from 'lucide-react';
+import { Map, School, ClipboardList, Package, Truck, IndianRupee, CheckSquare, BarChart3, LogOut, Layers3 } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
 
 const items = [
   ['/', 'Dashboard', BarChart3], ['/schools', 'Schools', School], ['/visits', 'Visits', CheckSquare],
-  ['/map', 'Map', Map], ['/orders', 'Orders', ClipboardList], ['/products', 'Products', Package],
+  ['/map', 'Map', Map], ['/orders', 'Orders', ClipboardList], ['/templates', 'Templates', Layers3], ['/products', 'Products', Package],
   ['/inventory', 'Inventory', Package], ['/deliveries', 'Deliveries', Truck], ['/payments', 'Payments', IndianRupee],
 ];
 
@@ -26,7 +26,7 @@ export default function AppNav() {
     </aside>
     <div className="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur border-b px-4 py-3 flex items-center justify-between">
       <Link href="/" className="font-bold">School Supply <span className="text-emerald-600">Ops</span></Link>
-      <div className="flex gap-2 overflow-x-auto max-w-[70%]">{items.slice(0,4).map(([href,label]: any) => <Link key={href} href={href} className="whitespace-nowrap rounded-full border px-3 py-1.5 text-xs">{label}</Link>)}</div>
+      <div className="flex gap-2 overflow-x-auto max-w-[70%]">{items.slice(0,6).map(([href,label]: any) => <Link key={href} href={href} className="whitespace-nowrap rounded-full border px-3 py-1.5 text-xs">{label}</Link>)}</div>
     </div>
   </>;
 }
