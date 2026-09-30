@@ -1,0 +1,28 @@
+'use client';
+
+import { FormEvent, useEffect, useState } from 'react';
+import AppNav from '@/components/AppNav';
+import { createClient } from '@/lib/supabase';
+
+type Product={id:string;name:string;unit:string;selling_price:number;tax_rate:number};
+type Template={id:string;name:string;description:string|null};
+type Item={id:string;product_id:string|null;product_name:string;default_quantity:number;unit:string;default_price:number;sort_order:number};
+
+export default function TemplatesPage(){
+ const supabase=createClient();
+ const [templates,setTemplates]=useState<Template[]>([]),[products,setProducts]=useState<Product[]>([]),[selected,setSelected]=useState<Template|null>(null),[items,setItems]=useState<Item[]>([]);
+ const [name,setName]=useState(''),[description,setDescription]=useState(''),[productId,setProductId]=useState(''),[qty,setQty]=useState('1'),[price,setPrice]=useState(''),[error,setError]=useState('');
+ const load=async()=>{const [t,p]=await Promise.all([supabase.from('order_templates').select('id,name,description').order('name'),supabase.from('products').select('id,name,unit,selling_price,tax_rate').eq('active',true).order('name')]);setTemplates((t.data||[]) as Template[]);setProducts((p.data||[]) as Product[]);};
+ const loadItems=async(id:string)=>{const {data}=await supabase.from('order_template_items').select('*').eq('template_id',id).order('sort_order');setItems((data||[]) as Item[])};
+ useEffect(()=>{load()},[]);
+ const createTemplate=async(e:FormEvent)=>{e.preventDefault();setError('');if(!name.trim()){setError('Template name is required.');return;}const {data,error:e2}=await supabase.from('order_templates').insert({name:name.trim(),description:description.trim()||null}).select('id,name,description').single();if(e2){setError(e2.message);return;}setName('');setDescription('');await load();if(data){setSelected(data as Template);setItems([])}};
+ const addItem=async(e:FormEvent)=>{e.preventDefault();if(!selected||!productId)return;const p=products.find(x=>x.id===productId);if(!p)return;const {error:e2}=await supabase.from('order_template_items').insert({template_id:selected.id,product_id:p.id,product_name:p.name,default_quantity:Number(qty),unit:p.unit,default_price:Number(price||p.selling_price),sort_order:items.length});if(e2)setError(e2.message);else{setQty('1');setPrice('');await loadItems(selected.id)}};
+ const deleteItem=async(id:string)=>{await supabase.from('order_template_items').delete().eq('id',id);if(selected)await loadItems(selected.id)};
+ const deleteTemplate=async(id:string)=>{if(!confirm('Delete this template?'))return;const {error:e}=await supabase.from('order_templates').delete().eq('id',id);if(e)setError(e.message);else{if(selected?.id===id){setSelected(null);setItems([])}await load()}};
+ return <div className="min-h-screen flex bg-slate-50"><AppNav/><main className="flex-1 p-4 md:p-8"><div className="max-w-6xl mx-auto">
+ <header className="mb-6"><p className="text-sm text-slate-500">Phase 3 · Templates</p><h1 className="text-3xl font-bold">Order templates</h1><p className="text-slate-500 mt-1">Reusable item sets for common school orders.</p></header>
+ <div className="grid lg:grid-cols-[300px_1fr] gap-5">
+ <section className="card p-4"><form onSubmit={createTemplate} className="space-y-2 mb-5"><input className="w-full border rounded-xl px-3 py-2" placeholder="Template name" value={name} onChange={e=>setName(e.target.value)}/><textarea className="w-full border rounded-xl px-3 py-2" placeholder="Description" value={description} onChange={e=>setDescription(e.target.value)}/><button className="w-full bg-emerald-600 text-white rounded-xl py-2 font-semibold">Create template</button></form><div className="space-y-1">{templates.map(t=><div key={t.id} className={'rounded-xl p-3 flex justify-between gap-2 '+(selected?.id===t.id?'bg-emerald-50':'hover:bg-slate-50')}><button onClick={()=>{setSelected(t);loadItems(t.id)}} className="text-left flex-1"><b>{t.name}</b><p className="text-xs text-slate-500">{t.description||'No description'}</p></button><button onClick={()=>deleteTemplate(t.id)} className="text-red-600 text-xs">Delete</button></div>)}</div></section>
+ <section className="card p-4">{!selected?<div className="py-16 text-center text-slate-500">Create or select a template.</div>:<><h2 className="font-bold text-xl">{selected.name}</h2><p className="text-sm text-slate-500 mb-4">{selected.description}</p><form onSubmit={addItem} className="grid sm:grid-cols-[1fr_120px_140px_auto] gap-2 mb-5"><select className="border rounded-xl px-3 py-2" value={productId} onChange={e=>{setProductId(e.target.value);const p=products.find(x=>x.id===e.target.value);if(p)setPrice(String(p.selling_price))}}><option value="">Add product…</option>{products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select><input className="border rounded-xl px-3 py-2" type="number" min="0.01" step="0.01" value={qty} onChange={e=>setQty(e.target.value)} placeholder="Qty"/><input className="border rounded-xl px-3 py-2" type="number" min="0" step="0.01" value={price} onChange={e=>setPrice(e.target.value)} placeholder="Price"/><button className="bg-emerald-600 text-white rounded-xl px-4 py-2">Add</button></form>{error&&<p className="text-sm text-red-600 mb-3">{error}</p>}<div className="space-y-2">{items.length===0?<p className="text-slate-500 py-8">No items yet.</p>:items.map(i=><div key={i.id} className="border rounded-xl p-3 flex justify-between"><div><b>{i.product_name}</b><p className="text-xs text-slate-500">{i.default_quantity} {i.unit} · ₹{Number(i.default_price).toFixed(2)}</p></div><button onClick={()=>deleteItem(i.id)} className="text-red-600 text-sm">Remove</button></div>)}</div></>}</section>
+ </div></div></main></div>;
+}
