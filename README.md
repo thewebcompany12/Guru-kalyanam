@@ -51,3 +51,10 @@ Never commit .env.local or service-role credentials.
 
 ## Phase 22
 - Upgraded Inventory into a stock-control workspace with stock KPIs, low/out-of-stock filters, product search, typed stock movements, notes, refresh/error states, and recent movement history.
+
+
+## Phase 23
+- Upgraded Payments into a collections workspace with received/outstanding KPIs and paid/partial order counts.
+- Added order-level balance tracking, payment-mode filters, school/search filters, references and notes.
+- Recording an order payment synchronizes the order paid amount and payment status.
+- Added responsive loading, error, empty and refresh states.
