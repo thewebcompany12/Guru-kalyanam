@@ -1,6 +1,7 @@
 'use client';
 
-export default function Error({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  void error;
   return (
     <main className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
       <section className="card w-full max-w-lg p-6 text-center">
