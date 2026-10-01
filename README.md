@@ -119,3 +119,11 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Organized the desktop sidebar into labeled navigation groups while preserving every existing destination.
 - Improved small-screen surfaces and navigation styling, with reduced-motion accessibility support.
 - Styling-only changes; no database migration or schema changes.
+
+
+## Phase 41 — Monthly business insights
+
+- Added a dedicated six-month view of order value, school collections, supplier payments, and operating expenses.
+- Added monthly trend bars, a month-by-month table, summary comparisons, refresh/error/loading states, and CSV export.
+- Net cash movement is clearly distinguished from accounting profit; order value is shown separately from actual collections.
+- No database schema changes or migration required.
