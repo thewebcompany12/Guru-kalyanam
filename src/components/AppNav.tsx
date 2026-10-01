@@ -15,7 +15,7 @@ const items = [
   ['/supplier-statements', 'Supplier statements', FileText], ['/supplier-performance', 'Supplier performance', TrendingUp], ['/expenses', 'Expenses', WalletCards],
   ['/deliveries', 'Deliveries', Truck], ['/payments', 'Payments', IndianRupee], ['/invoices', 'GST invoices', FileText],
   ['/whatsapp', 'WhatsApp', MessageCircle], ['/reminders', 'Reminders', CheckSquare], ['/tasks', 'Tasks', CheckSquare], ['/notifications', 'Notifications', Bell],
-  ['/reports', 'Reports', BarChart3], ['/insights', 'Monthly insights', TrendingUp], ['/timeline', 'Timeline', ClipboardList], ['/settings', 'Settings', Settings],
+  ['/reports', 'Reports', BarChart3], ['/school-collection-performance', 'School collection performance', TrendingUp], ['/insights', 'Monthly insights', TrendingUp], ['/timeline', 'Timeline', ClipboardList], ['/settings', 'Settings', Settings],
 ] as const;
 const groups:[string,string[]][]=[
  ['OVERVIEW',['/','/work-queue']],['FIELD OPERATIONS',['/schools','/visits','/follow-ups','/map']],
