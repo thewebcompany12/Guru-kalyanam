@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Bell, CalendarCheck, CheckCircle2, CreditCard, Package, RefreshCw, School, Search, Truck } from 'lucide-react';
+import { ArrowLeft, Bell, CalendarCheck, CreditCard, Package, RefreshCw, School, Search, Truck } from 'lucide-react';
 import AppNav from '@/components/AppNav';
 import { createClient } from '@/lib/supabase';
 
@@ -35,7 +36,7 @@ function pretty(value: unknown) {
 }
 
 export default function SchoolTimeline() {
-  const { id } = require('next/navigation').useParams<{ id: string }>();
+  const { id } = useParams<{ id: string }>();
   const client = createClient();
   const [school, setSchool] = useState<any>(null);
   const [events, setEvents] = useState<EventItem[]>([]);
