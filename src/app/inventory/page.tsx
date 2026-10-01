@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import AppNav from '@/components/AppNav';
-import { AlertTriangle, Boxes, Filter, History, PackagePlus, RefreshCw, Search, TrendingDown, TrendingUp } from 'lucide-react';
+import { AlertTriangle, Boxes, Download, Filter, History, IndianRupee, PackagePlus, RefreshCw, Search, TrendingDown, TrendingUp } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
 
-type Row = { product_id:string; available_stock:number; incoming_stock:number; reserved_stock:number; products?:{name:string;sku:string|null;unit:string|null} };
+type Row = { product_id:string; available_stock:number; incoming_stock:number; reserved_stock:number; products?:{name:string;sku:string|null;unit:string|null;minimum_stock:number;purchase_price:number} };
 type Tx = { id:string; product_id:string; quantity:number; transaction_type:string; notes:string|null; created_at:string; products?:{name:string} };
 const transactionTypes=['PURCHASE','SALE','ADJUSTMENT','RETURN','DAMAGE','TRANSFER'];
 
@@ -27,7 +27,7 @@ export default function Inventory(){
   const load=async()=>{
     setLoading(true); setError('');
     const [i,p,t]=await Promise.all([
-      s.from('inventory').select('product_id,available_stock,incoming_stock,reserved_stock,products(name,sku,unit)').order('updated_at',{ascending:false}),
+      s.from('inventory').select('product_id,available_stock,incoming_stock,reserved_stock,products(name,sku,unit,minimum_stock,purchase_price)').order('updated_at',{ascending:false}),
       s.from('products').select('id,name,sku,unit').eq('active',true).order('name'),
       s.from('inventory_transactions').select('id,product_id,quantity,transaction_type,notes,created_at,products(name)').order('created_at',{ascending:false}).limit(100),
     ]);
@@ -43,7 +43,7 @@ export default function Inventory(){
     return rows.filter(r=>{
       const matchesSearch=!q||[r.products?.name,r.products?.sku,r.products?.unit].filter(Boolean).join(' ').toLowerCase().includes(q);
       const available=Number(r.available_stock||0);
-      const matchesStock=stockFilter==='ALL'||(stockFilter==='LOW'&&available<=5)||(stockFilter==='OUT'&&available<=0)||(stockFilter==='HEALTHY'&&available>5);
+      const matchesStock=stockFilter==='ALL'||(stockFilter==='LOW'&&available>0&&available<=Number(r.products?.minimum_stock||0))||(stockFilter==='OUT'&&available<=0)||(stockFilter==='HEALTHY'&&available>Number(r.products?.minimum_stock||0));
       return matchesSearch&&matchesStock;
     });
   },[rows,search,stockFilter]);
@@ -51,10 +51,14 @@ export default function Inventory(){
   const stats=useMemo(()=>({
     products:rows.length,
     units:rows.reduce((n,r)=>n+Number(r.available_stock||0),0),
-    low:rows.filter(r=>Number(r.available_stock||0)>0&&Number(r.available_stock||0)<=5).length,
+    low:rows.filter(r=>Number(r.available_stock||0)>0&&Number(r.available_stock||0)<=Number(r.products?.minimum_stock||0)).length,
     out:rows.filter(r=>Number(r.available_stock||0)<=0).length,
     incoming:rows.reduce((n,r)=>n+Number(r.incoming_stock||0),0),
+    reorderUnits:rows.reduce((n,r)=>n+Math.max(0,Number(r.products?.minimum_stock||0)-Number(r.available_stock||0)),0),
+    stockValue:rows.reduce((n,r)=>n+Math.max(0,Number(r.available_stock||0))*Number(r.products?.purchase_price||0),0),
   }),[rows]);
+
+  const exportCsv=()=>{const records=[['Product','SKU','Unit','Available stock','Incoming stock','Reserved stock','Minimum stock','Reorder quantity','Purchase price','Estimated stock cost'],...visible.map(r=>[r.products?.name||'Product',r.products?.sku||'',r.products?.unit||'unit',r.available_stock,r.incoming_stock,r.reserved_stock,Number(r.products?.minimum_stock||0),Math.max(0,Number(r.products?.minimum_stock||0)-Number(r.available_stock||0)),Number(r.products?.purchase_price||0),Math.max(0,Number(r.available_stock||0))*Number(r.products?.purchase_price||0)])];const csv=records.map(row=>row.map(v=>{const x=String(v??'');return /[",\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x}).join(',')).join('\n');const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='guru-kalyanam-inventory-reorder.csv';a.click();URL.revokeObjectURL(url)};
 
   const adjust=async()=>{
     const n=Number(qty);
@@ -74,13 +78,15 @@ export default function Inventory(){
       <button onClick={()=>void load()} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border bg-white px-4 py-2.5 text-sm font-semibold disabled:opacity-50"><RefreshCw size={16} className={loading?'animate-spin':''}/>Refresh</button>
     </header>
     {error&&<div className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
-    <section className="grid grid-cols-2 md:grid-cols-5 gap-3">
+    <section className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
       {[
         ['Products',stats.products,Boxes,'bg-teal-100 text-teal-700'],
         ['Available units',stats.units,PackagePlus,'bg-blue-100 text-blue-700'],
         ['Low stock',stats.low,TrendingDown,'bg-amber-100 text-amber-700'],
         ['Out of stock',stats.out,AlertTriangle,'bg-red-100 text-red-700'],
-        ['Incoming',stats.incoming,TrendingUp,'bg-emerald-100 text-emerald-700'],
+        ['Incoming units',stats.incoming,TrendingUp,'bg-emerald-100 text-emerald-700'],
+        ['Reorder gap',stats.reorderUnits,PackagePlus,'bg-orange-100 text-orange-700'],
+        ['Estimated stock cost', '₹'+stats.stockValue.toLocaleString('en-IN',{maximumFractionDigits:2}),IndianRupee,'bg-violet-100 text-violet-700'],
       ].map(([label,value,Icon,tone]:any)=><div className="card p-4" key={label as string}><span className={`grid h-9 w-9 place-items-center rounded-lg ${tone}`}><Icon size={17}/></span><p className="text-xs text-slate-500 mt-3">{label}</p><b className="text-2xl">{value}</b></div>)}
     </section>
     <section className="card p-4">
@@ -94,14 +100,14 @@ export default function Inventory(){
       <button onClick={()=>void adjust()} disabled={saving} className="mt-2 rounded-xl bg-slate-900 text-white px-5 py-2.5 text-sm font-semibold disabled:opacity-50">{saving?'Saving…':'Record movement'}</button>
     </section>
     <section className="card p-4">
-      <div className="grid gap-2 md:grid-cols-[1fr_180px]">
+      <div className="grid gap-2 md:grid-cols-[1fr_180px_auto]">
         <label className="relative"><Search size={16} className="absolute left-3 top-3 text-slate-400"/><input className="w-full border rounded-xl px-9 py-2.5 text-sm" placeholder="Search product or SKU…" value={search} onChange={e=>setSearch(e.target.value)}/></label>
-        <select className="border rounded-xl px-3 py-2.5 text-sm" value={stockFilter} onChange={e=>setStockFilter(e.target.value)}><option value="ALL">All stock</option><option value="LOW">Low stock</option><option value="OUT">Out of stock</option><option value="HEALTHY">Healthy stock</option></select>
+        <select className="border rounded-xl px-3 py-2.5 text-sm" value={stockFilter} onChange={e=>setStockFilter(e.target.value)}><option value="ALL">All stock</option><option value="LOW">Below minimum / low</option><option value="OUT">Out of stock</option><option value="HEALTHY">Healthy stock</option></select>
       </div>
-      <div className="flex items-center gap-2 text-xs text-slate-500 my-3"><Filter size={14}/> Showing {visible.length} of {rows.length} products</div>
+      <div className="flex items-center justify-between gap-3 my-3"><div className="flex items-center gap-2 text-xs text-slate-500"><Filter size={14}/> Showing {visible.length} of {rows.length} products</div><button onClick={exportCsv} disabled={!visible.length} className="inline-flex items-center justify-center gap-2 rounded-xl border bg-white px-3 py-2 text-sm font-semibold disabled:opacity-50"><Download size={15}/>Export CSV</button></div>
       {loading?<div className="py-10 text-center text-slate-500">Loading inventory…</div>:!visible.length?<div className="py-10 text-center text-slate-500">No products match the current filters.</div>:<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{visible.map(r=><article key={r.product_id} className="border rounded-xl p-4">
-        <div className="flex justify-between gap-3"><div><b>{r.products?.name||'Product'}</b><p className="text-xs text-slate-500">{r.products?.sku||'No SKU'} · {r.products?.unit||'unit'}</p></div><span className={`rounded-full px-2 py-1 text-xs font-semibold ${Number(r.available_stock)<=0?'bg-red-100 text-red-700':Number(r.available_stock)<=5?'bg-amber-100 text-amber-700':'bg-emerald-100 text-emerald-700'}`}>{Number(r.available_stock)<=0?'Out':Number(r.available_stock)<=5?'Low':'In stock'}</span></div>
-        <div className="grid grid-cols-3 gap-2 mt-4 text-sm"><div><p className="text-xs text-slate-500">Available</p><b>{r.available_stock}</b></div><div><p className="text-xs text-slate-500">Incoming</p><b>{r.incoming_stock}</b></div><div><p className="text-xs text-slate-500">Reserved</p><b>{r.reserved_stock}</b></div></div>
+        <div className="flex justify-between gap-3"><div><b>{r.products?.name||'Product'}</b><p className="text-xs text-slate-500">{r.products?.sku||'No SKU'} · {r.products?.unit||'unit'}</p></div><span className={`rounded-full px-2 py-1 text-xs font-semibold ${Number(r.available_stock)<=0?'bg-red-100 text-red-700':Number(r.available_stock)<=Number(r.products?.minimum_stock||0)?'bg-amber-100 text-amber-700':'bg-emerald-100 text-emerald-700'}`}>{Number(r.available_stock)<=0?'Out':Number(r.available_stock)<=Number(r.products?.minimum_stock||0)?'Low':'In stock'}</span></div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4 text-sm"><div><p className="text-xs text-slate-500">Available</p><b>{r.available_stock} {r.products?.unit||''}</b></div><div><p className="text-xs text-slate-500">Incoming</p><b>{r.incoming_stock}</b></div><div><p className="text-xs text-slate-500">Reserved</p><b>{r.reserved_stock}</b></div><div><p className="text-xs text-slate-500">Minimum stock</p><b>{Number(r.products?.minimum_stock||0)}</b></div><div><p className="text-xs text-slate-500">Reorder gap</p><b className={Math.max(0,Number(r.products?.minimum_stock||0)-Number(r.available_stock||0))>0?'text-orange-700':''}>{Math.max(0,Number(r.products?.minimum_stock||0)-Number(r.available_stock||0))}</b></div><div><p className="text-xs text-slate-500">Est. stock cost</p><b>₹{(Math.max(0,Number(r.available_stock||0))*Number(r.products?.purchase_price||0)).toLocaleString('en-IN',{maximumFractionDigits:2})}</b></div></div>
       </article>)}</div>}
     </section>
     <section className="card p-4"><div className="flex items-center gap-2 mb-3"><History size={17}/><h2 className="font-bold">Recent stock movements</h2></div>
