@@ -127,3 +127,10 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Added monthly trend bars, a month-by-month table, summary comparisons, refresh/error/loading states, and CSV export.
 - Net cash movement is clearly distinguished from accounting profit; order value is shown separately from actual collections.
 - No database schema changes or migration required.
+
+
+## Phase 42 — School receivables and overdue balances
+
+- Added an outstanding-order dashboard with aging buckets (0–30, 31–60, 61–90, and 90+ days), school/search filters, and CSV export.
+- Balances reconcile the order paid amount against linked payment totals using the greater value to avoid double-counting; cancelled orders are excluded.
+- Aging is based on order date because a contractual due-date field is not part of this view. No database migration required.
