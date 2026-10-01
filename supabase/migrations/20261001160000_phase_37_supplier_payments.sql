@@ -94,6 +94,7 @@ declare
   v_existing_purchase_id uuid;
   v_existing_amount numeric(14,2);
   v_purchase_supplier_id uuid;
+  v_purchase_status text;
   v_due numeric(14,2);
   v_applied numeric(14,2) := 0;
   v_advance numeric(14,2) := 0;
@@ -144,12 +145,15 @@ begin
   end if;
 
   if p_purchase_id is not null then
-    select supplier_id, greatest(0, total - paid_amount)
-      into v_purchase_supplier_id, v_due
+    select supplier_id, greatest(0, total - paid_amount), status
+      into v_purchase_supplier_id, v_due, v_purchase_status
       from public.purchases where id = p_purchase_id for update;
     if not found then raise exception 'Purchase order not found'; end if;
     if v_purchase_supplier_id <> p_supplier_id then
       raise exception 'Purchase order does not belong to the selected supplier';
+    end if;
+    if v_purchase_status = 'CANCELLED' then
+      raise exception 'Cancelled purchase orders cannot receive payments';
     end if;
     if coalesce(p_is_advance, false) is false and p_amount > v_due then
       raise exception 'Payment exceeds the purchase order balance. Mark it as an advance only if the excess is intentional.';
