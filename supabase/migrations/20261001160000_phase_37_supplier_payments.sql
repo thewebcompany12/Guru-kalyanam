@@ -170,7 +170,8 @@ begin
   ) values (
     p_supplier_id, p_purchase_id, coalesce(p_payment_date, current_date), p_amount,
     p_payment_mode, nullif(trim(p_reference_number), ''), nullif(trim(p_notes), ''),
-    coalesce(p_is_advance, false), p_idempotency_key, auth.uid()
+    (coalesce(p_is_advance, false) and (p_purchase_id is null or v_advance > 0)),
+    p_idempotency_key, auth.uid()
   ) returning id into v_payment_id;
 
   if p_purchase_id is not null and v_applied > 0 then
