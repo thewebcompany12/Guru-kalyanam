@@ -70,3 +70,12 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Added overdue counts, next-up work, one-tap completion and quick links into existing workspaces.
 - Added responsive mobile/desktop prioritization with refresh and explicit error states.
 \n\n## Phase 26 · School Activity Timeline\n- Added a per-school history workspace combining visits, orders, preparation status, deliveries, payments, reminders, and audit activity.\n- Added event-type summaries, search, filters, refresh, status context, and deep links back to related orders.\n- Added a direct School timeline action from each school record.\n
+
+## Phase 27 — Multi-school visit routes
+
+- Start one visit route in the morning without selecting a school.
+- Add each school to the active route when you physically reach it.
+- The previous school visit closes automatically when the next school is added.
+- Each school keeps its own arrival time, GPS, purpose, person met, notes, order/payment/follow-up details.
+- End the route once the day's school visits are complete.
+- Existing single-school visit records remain supported through a nullable session link.
