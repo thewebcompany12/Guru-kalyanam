@@ -148,3 +148,11 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Added a supplier-wise ledger of purchase charges, recorded payments, and advances.
 - Added date-range filtering, opening/closing balance summaries, print-friendly output, and CSV export.
 - Statements use existing purchases and supplier payment records; no schema migration or production deployment.
+
+
+## Phase 45 — Supplier performance insights
+
+- Added supplier comparison for purchase value, recorded payments, open purchase orders, and received versus ordered units.
+- Added supplier search, date-range filters, refresh/error/loading/empty states, and CSV export.
+- Purchase totals and recorded payments are clearly separated; period movement is not represented as a historical payable balance.
+- Uses existing supplier, purchase, purchase-item, and supplier-payment records; no database migration or production deployment.
