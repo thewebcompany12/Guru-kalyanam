@@ -88,3 +88,11 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Invoice numbering, seller details, buyer snapshot, tax breakdown, and invoice register.
 - Print / Save PDF from the invoice detail screen.
 - Invoice and line-item tables use RLS and preserve the source order records.
+
+
+## Phase 29 — WhatsApp Business & notifications
+- Added a WhatsApp Center for reusable message templates, school WhatsApp contacts, drafts and a notification queue.
+- Added reusable order confirmation, delivery update, payment received and follow-up templates.
+- Added direct WhatsApp handoff with prefilled messages through WhatsApp deep links.
+- Added message status tracking and RLS-protected WhatsApp message/template tables.
+- The workspace is provider-ready for Meta/WhatsApp Business API credentials without exposing provider secrets in the browser.
