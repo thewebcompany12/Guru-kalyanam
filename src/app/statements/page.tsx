@@ -56,7 +56,7 @@ export default function SchoolStatementsPage() {
       description: [payment.payment_mode, payment.notes].filter(Boolean).join(' · ') || 'Payment received',
       debit: 0, credit: Math.max(0, Number(payment.amount || 0)), balance: 0,
     }));
-    const all = [...charges, ...collections].sort((a, b) => a.date.localeCompare(b.date) || (a.kind === 'Order' ? -1 : 1) || a.reference.localeCompare(b.reference));
+    const all = [...charges, ...collections].sort((a, b) => a.date.localeCompare(b.date) || (a.kind !== b.kind ? (a.kind === 'Order' ? -1 : 1) : a.reference.localeCompare(b.reference)));
     let running = 0;
     return all.map((entry) => {
       running += entry.debit - entry.credit;
