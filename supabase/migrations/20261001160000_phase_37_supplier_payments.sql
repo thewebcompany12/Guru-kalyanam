@@ -129,6 +129,20 @@ begin
   perform 1 from public.suppliers where id = p_supplier_id for update;
   if not found then raise exception 'Supplier not found'; end if;
 
+  -- Recheck after the supplier lock so simultaneous retries with the same key
+  -- return the first committed payment instead of surfacing a unique-key error.
+  select id, supplier_id, purchase_id, amount
+    into v_payment_id, v_existing_supplier_id, v_existing_purchase_id, v_existing_amount
+    from public.supplier_payments where idempotency_key = p_idempotency_key;
+  if v_payment_id is not null then
+    if v_existing_supplier_id <> p_supplier_id
+      or v_existing_purchase_id is distinct from p_purchase_id
+      or v_existing_amount <> p_amount then
+      raise exception 'Idempotency key was already used for a different payment';
+    end if;
+    return v_payment_id;
+  end if;
+
   if p_purchase_id is not null then
     select supplier_id, greatest(0, total - paid_amount)
       into v_purchase_supplier_id, v_due
