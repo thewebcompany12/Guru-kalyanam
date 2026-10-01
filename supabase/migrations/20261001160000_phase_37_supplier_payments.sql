@@ -69,7 +69,7 @@ revoke all on function private.sync_supplier_outstanding_delta() from public, an
 
 drop trigger if exists sync_supplier_outstanding_delta on public.purchases;
 create trigger sync_supplier_outstanding_delta
-  after insert or update of supplier_id, total, paid_amount, status or delete
+  after insert or update or delete
   on public.purchases
   for each row execute function private.sync_supplier_outstanding_delta();
 
