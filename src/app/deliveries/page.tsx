@@ -89,7 +89,22 @@ export default function Deliveries() {
     return acc;
   }, {}), [rows]);
 
-  const today = new Date().toISOString().slice(0, 10);\n  const overdueCount = rows.filter((r) => r.scheduled_date && r.scheduled_date < today && !['DELIVERED', 'FAILED'].includes(r.status)).length;\n  const exportCsv = () => {\n    const escape = (value: unknown) => '\"' + String(value ?? '').replace(/\"/g, '\"\"') + '\"';\n    const header = ['School', 'Order number', 'Amount', 'Scheduled date', 'Scheduled time', 'Status', 'Assigned to', 'Delivered at', 'Notes'];\n    const data = visible.map((r) => [r.school?.name, r.order?.order_number, r.order?.total, r.scheduled_date, r.scheduled_time, statusMeta[r.status]?.label || r.status, profiles.find((p) => p.id === r.responsible_user_id)?.full_name, r.delivered_at, r.delivery_notes]);\n    const csv = [header, ...data].map((line) => line.map(escape).join(',')).join('\\r\\n');\n    const url = URL.createObjectURL(new Blob(['\\uFEFF', csv], { type: 'text/csv;charset=utf-8;' }));\n    const a = document.createElement('a'); a.href = url; a.download = 'guru-kalyanam-deliveries.csv'; a.click(); URL.revokeObjectURL(url);\n  };\n\n  const create = async () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const overdueCount = rows.filter((r) => r.scheduled_date && r.scheduled_date < today && !['DELIVERED', 'FAILED'].includes(r.status)).length;
+  const exportCsv = () => {
+    const escapeCsv = (value: unknown) => '"' + String(value ?? '').replace(/"/g, '""') + '"';
+    const header = ['School', 'Order number', 'Amount', 'Scheduled date', 'Scheduled time', 'Status', 'Assigned to', 'Delivered at', 'Notes'];
+    const data = visible.map((r) => [r.school?.name, r.order?.order_number, r.order?.total, r.scheduled_date, r.scheduled_time, statusMeta[r.status]?.label || r.status, profiles.find((p) => p.id === r.responsible_user_id)?.full_name, r.delivered_at, r.delivery_notes]);
+    const csv = [header, ...data].map((line) => line.map(escapeCsv).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'guru-kalyanam-deliveries.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const create = async () => {
     if (!orderId) { setError('Select an order.'); return; }
     const order = orders.find((o) => o.id === orderId);
     if (!order) { setError('Selected order was not found.'); return; }
