@@ -156,3 +156,11 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Added supplier search, date-range filters, refresh/error/loading/empty states, and CSV export.
 - Purchase totals and recorded payments are clearly separated; period movement is not represented as a historical payable balance.
 - Uses existing supplier, purchase, purchase-item, and supplier-payment records; no database migration or production deployment.
+
+
+## Phase 46 — School collection performance
+
+- Added school-wise order value, paid amount, outstanding balance, and collection-rate comparisons.
+- Added school search, order-date filters, refresh/loading/error/empty states, and CSV export.
+- Uses existing orders and recorded payments; cancelled orders are excluded and paid amounts avoid double-counting linked payments.
+- Period filters use order dates; figures are an operational view, not a dated accounting statement. No database migration or production deployment.
