@@ -192,3 +192,9 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Added a read-only cross-order fulfilment view with delivery schedules, order statuses, and overdue expected-delivery flags.
 - Added search, status/date filters, summary metrics, refresh, and CSV export.
 - Uses existing orders and deliveries records; no database migration required.
+
+
+## Phase 51 — Purchase Receiving Tracker
+- Added a read-only receiving register showing ordered, received, and outstanding quantities by supplier and purchase order.
+- Added overdue expected-arrival flags, status/search/date filters, summary metrics, refresh, and CSV export.
+- Uses existing purchases and purchase_items data; no database migration or duplicate stock records required.
