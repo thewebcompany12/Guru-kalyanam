@@ -186,3 +186,9 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Added a read-only stock movement audit trail with product/SKU/note search, movement-type and date filters.
 - Added positive/negative quantity summaries, refresh, responsive table layout, and CSV export.
 - Uses existing `inventory_transactions` and `products` data; no database migration or schema changes required.
+
+
+## Phase 50 — Order Fulfilment Monitor
+- Added a read-only cross-order fulfilment view with delivery schedules, order statuses, and overdue expected-delivery flags.
+- Added search, status/date filters, summary metrics, refresh, and CSV export.
+- Uses existing orders and deliveries records; no database migration required.
