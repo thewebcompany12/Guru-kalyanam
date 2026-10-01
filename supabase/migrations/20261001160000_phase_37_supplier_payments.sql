@@ -25,7 +25,6 @@ create index if not exists supplier_payments_purchase_idx
   on public.supplier_payments (purchase_id) where purchase_id is not null;
 
 alter table public.supplier_payments enable row level security;
-
 drop policy if exists "Authenticated users can read supplier payments" on public.supplier_payments;
 create policy "Authenticated users can read supplier payments"
   on public.supplier_payments for select to authenticated
@@ -33,6 +32,46 @@ create policy "Authenticated users can read supplier payments"
 
 revoke all on public.supplier_payments from anon, authenticated;
 grant select on public.supplier_payments to authenticated;
+
+-- Keep the existing supplier balance aligned with future purchase-order changes,
+-- without rewriting historical balances during deployment.
+create or replace function private.sync_supplier_outstanding_delta()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, public, private
+as $function$
+declare
+  v_old_due numeric(14,2) := 0;
+  v_new_due numeric(14,2) := 0;
+begin
+  if tg_op <> 'INSERT' then
+    v_old_due := case when old.status = 'CANCELLED' then 0 else greatest(0, old.total - old.paid_amount) end;
+    update public.suppliers
+      set outstanding_amount = greatest(0, outstanding_amount - v_old_due),
+          updated_at = now()
+      where id = old.supplier_id;
+  end if;
+
+  if tg_op <> 'DELETE' then
+    v_new_due := case when new.status = 'CANCELLED' then 0 else greatest(0, new.total - new.paid_amount) end;
+    update public.suppliers
+      set outstanding_amount = outstanding_amount + v_new_due,
+          updated_at = now()
+      where id = new.supplier_id;
+  end if;
+
+  if tg_op = 'DELETE' then return old; end if;
+  return new;
+end;
+$function$;
+revoke all on function private.sync_supplier_outstanding_delta() from public, anon, authenticated;
+
+drop trigger if exists sync_supplier_outstanding_delta on public.purchases;
+create trigger sync_supplier_outstanding_delta
+  after insert or update of supplier_id, total, paid_amount, status or delete
+  on public.purchases
+  for each row execute function private.sync_supplier_outstanding_delta();
 
 create or replace function public.record_supplier_payment(
   p_supplier_id uuid,
@@ -51,11 +90,13 @@ set search_path = pg_catalog, public, private
 as $function$
 declare
   v_payment_id uuid;
+  v_existing_supplier_id uuid;
+  v_existing_purchase_id uuid;
+  v_existing_amount numeric(14,2);
   v_purchase_supplier_id uuid;
   v_due numeric(14,2);
   v_applied numeric(14,2) := 0;
   v_advance numeric(14,2) := 0;
-  v_supplier_outstanding numeric(14,2);
 begin
   if auth.uid() is null or not private.has_write_access() then
     raise exception 'Write access required';
@@ -66,15 +107,24 @@ begin
   if p_amount is null or p_amount <= 0 or p_amount > 999999999999 then
     raise exception 'Payment amount must be greater than zero';
   end if;
-  if p_payment_mode not in ('CASH','BANK_TRANSFER','UPI','CHEQUE','OTHER') then
+  if p_payment_mode is null or p_payment_mode not in ('CASH','BANK_TRANSFER','UPI','CHEQUE','OTHER') then
     raise exception 'Select a valid payment mode';
   end if;
   if p_purchase_id is null and coalesce(p_is_advance, false) is false then
     raise exception 'Select a purchase order or mark this as an advance payment';
   end if;
 
-  select id into v_payment_id from public.supplier_payments where idempotency_key = p_idempotency_key;
-  if v_payment_id is not null then return v_payment_id; end if;
+  select id, supplier_id, purchase_id, amount
+    into v_payment_id, v_existing_supplier_id, v_existing_purchase_id, v_existing_amount
+    from public.supplier_payments where idempotency_key = p_idempotency_key;
+  if v_payment_id is not null then
+    if v_existing_supplier_id <> p_supplier_id
+      or v_existing_purchase_id is distinct from p_purchase_id
+      or v_existing_amount <> p_amount then
+      raise exception 'Idempotency key was already used for a different payment';
+    end if;
+    return v_payment_id;
+  end if;
 
   perform 1 from public.suppliers where id = p_supplier_id for update;
   if not found then raise exception 'Supplier not found'; end if;
@@ -106,6 +156,7 @@ begin
   ) returning id into v_payment_id;
 
   if p_purchase_id is not null and v_applied > 0 then
+    -- The purchase trigger updates supplier outstanding by the applied amount.
     update public.purchases
       set paid_amount = paid_amount + v_applied, updated_at = now()
       where id = p_purchase_id;
@@ -116,13 +167,6 @@ begin
       set advance_balance = advance_balance + v_advance, updated_at = now()
       where id = p_supplier_id;
   end if;
-
-  select outstanding_amount into v_supplier_outstanding
-    from public.suppliers where id = p_supplier_id;
-  update public.suppliers
-    set outstanding_amount = greatest(0, coalesce(v_supplier_outstanding, 0) - p_amount),
-        updated_at = now()
-    where id = p_supplier_id;
 
   return v_payment_id;
 end;
