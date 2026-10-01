@@ -144,13 +144,20 @@ begin
 
   -- Recheck after the supplier lock so simultaneous retries with the same key
   -- return the first committed payment instead of surfacing a unique-key error.
-  select id, supplier_id, purchase_id, amount
-    into v_payment_id, v_existing_supplier_id, v_existing_purchase_id, v_existing_amount
+  select id, supplier_id, purchase_id, amount, payment_date, payment_mode,
+         reference_number, notes, is_advance
+    into v_payment_id, v_existing_supplier_id, v_existing_purchase_id, v_existing_amount,
+         v_existing_date, v_existing_mode, v_existing_reference, v_existing_notes, v_existing_is_advance
     from public.supplier_payments where idempotency_key = p_idempotency_key;
   if v_payment_id is not null then
     if v_existing_supplier_id <> p_supplier_id
       or v_existing_purchase_id is distinct from p_purchase_id
-      or v_existing_amount <> p_amount then
+      or v_existing_amount <> p_amount
+      or v_existing_date <> coalesce(p_payment_date, current_date)
+      or v_existing_mode <> p_payment_mode
+      or v_existing_reference is distinct from nullif(trim(p_reference_number), '')
+      or v_existing_notes is distinct from nullif(trim(p_notes), '')
+      or v_existing_is_advance <> coalesce(p_is_advance, false) then
       raise exception 'Idempotency key was already used for a different payment';
     end if;
     return v_payment_id;
