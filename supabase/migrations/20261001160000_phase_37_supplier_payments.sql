@@ -93,6 +93,11 @@ declare
   v_existing_supplier_id uuid;
   v_existing_purchase_id uuid;
   v_existing_amount numeric(14,2);
+  v_existing_date date;
+  v_existing_mode text;
+  v_existing_reference text;
+  v_existing_notes text;
+  v_existing_is_advance boolean;
   v_purchase_supplier_id uuid;
   v_purchase_status text;
   v_due numeric(14,2);
@@ -115,13 +120,20 @@ begin
     raise exception 'Select a purchase order or mark this as an advance payment';
   end if;
 
-  select id, supplier_id, purchase_id, amount
-    into v_payment_id, v_existing_supplier_id, v_existing_purchase_id, v_existing_amount
+  select id, supplier_id, purchase_id, amount, payment_date, payment_mode,
+         reference_number, notes, is_advance
+    into v_payment_id, v_existing_supplier_id, v_existing_purchase_id, v_existing_amount,
+         v_existing_date, v_existing_mode, v_existing_reference, v_existing_notes, v_existing_is_advance
     from public.supplier_payments where idempotency_key = p_idempotency_key;
   if v_payment_id is not null then
     if v_existing_supplier_id <> p_supplier_id
       or v_existing_purchase_id is distinct from p_purchase_id
-      or v_existing_amount <> p_amount then
+      or v_existing_amount <> p_amount
+      or v_existing_date <> coalesce(p_payment_date, current_date)
+      or v_existing_mode <> p_payment_mode
+      or v_existing_reference is distinct from nullif(trim(p_reference_number), '')
+      or v_existing_notes is distinct from nullif(trim(p_notes), '')
+      or v_existing_is_advance <> coalesce(p_is_advance, false) then
       raise exception 'Idempotency key was already used for a different payment';
     end if;
     return v_payment_id;
