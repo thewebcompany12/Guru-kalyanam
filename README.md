@@ -172,3 +172,11 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Added a phone-friendly receipt preview with school details, amount, payment method, reference, notes, and a stable receipt identifier.
 - Added browser print / Save PDF and native share support, with clipboard fallback where available.
 - Receipts are read-only and use existing payment records; no database migration or duplicate payment writes.
+
+
+## Phase 48 — Supplier payment vouchers
+
+- Added a searchable register of existing supplier payment records, with payment-date filters and supplier/purchase/reference search.
+- Added printable voucher preview with supplier details, amount, payment mode, advance classification, purchase order and transaction reference.
+- Added Print / Save PDF, native phone sharing with clipboard fallback, and filtered CSV export.
+- Vouchers are read-only; no duplicate payment records and no database migration.
