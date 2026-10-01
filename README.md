@@ -134,3 +134,10 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Added an outstanding-order dashboard with aging buckets (0–30, 31–60, 61–90, and 90+ days), school/search filters, and CSV export.
 - Balances reconcile the order paid amount against linked payment totals using the greater value to avoid double-counting; cancelled orders are excluded.
 - Aging is based on order date because a contractual due-date field is not part of this view. No database migration required.
+
+
+## Phase 43 — School account statements
+
+- Added a school-wise chronological statement combining recorded order charges and collection entries.
+- Added date-range filtering, opening/closing balance summaries, print-friendly output, and CSV export.
+- Statements use existing orders and payments only; no schema migration or production deployment.
