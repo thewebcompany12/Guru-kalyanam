@@ -96,3 +96,10 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Added direct WhatsApp handoff with prefilled messages through WhatsApp deep links.
 - Added message status tracking and RLS-protected WhatsApp message/template tables.
 - The workspace is provider-ready for Meta/WhatsApp Business API credentials without exposing provider secrets in the browser.
+
+
+## Phase 38 — Business expenses & cash flow
+
+- Added a dedicated operating-expense ledger with categories, date/mode filters, search, edit/delete controls, and CSV export.
+- Expenses are stored separately from school collections and supplier payments with row-level security and write-access checks.
+- Reports include supplier payments, operating expenses, and net cash movement for the selected period. Net cash movement is explicitly a cash-flow measure, not accounting profit.
