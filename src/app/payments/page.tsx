@@ -45,8 +45,9 @@ export default function PaymentsPage(){
  const selectedOrder=orders.find(o=>o.id===order);
  const remaining=selectedOrder?Math.max(0,Number(selectedOrder.total)-orderPaid):0;
 
+ const schoolNames=new Map(schools.map(s=>[s.id,s.name]));
  const visible=rows.filter(r=>{
-   const name=r.schools?.name||'';
+   const name=schoolNames.get(r.school_id)||'';
    const q=query.trim().toLowerCase();
    return (!school||r.school_id===school)&&(!modeFilter||r.payment_mode===modeFilter)&&(!q||name.toLowerCase().includes(q)||(r.reference_number||'').toLowerCase().includes(q)||(r.notes||'').toLowerCase().includes(q));
  });
