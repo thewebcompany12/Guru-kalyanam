@@ -31,6 +31,7 @@ export default function SupplierPaymentsPage() {
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
   const [isAdvance, setIsAdvance] = useState(false);
+  const [idempotencyKey, setIdempotencyKey] = useState('');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -73,6 +74,8 @@ export default function SupplierPaymentsPage() {
     if (!purchaseId && !isAdvance) { setError('Select a purchase order, or mark this as an advance payment.'); return; }
     if (purchaseId && !isAdvance && value > due) { setError('This amount exceeds the purchase order balance. Mark it as an advance only if you intend to record the excess as supplier credit.'); return; }
     setSaving(true);
+    const requestKey = idempotencyKey || crypto.randomUUID();
+    setIdempotencyKey(requestKey);
     const result = await db.rpc('record_supplier_payment', {
       p_supplier_id: supplierId,
       p_purchase_id: purchaseId || null,
@@ -82,11 +85,12 @@ export default function SupplierPaymentsPage() {
       p_reference_number: reference.trim() || null,
       p_notes: notes.trim() || null,
       p_is_advance: isAdvance,
-      p_idempotency_key: crypto.randomUUID(),
+      p_idempotency_key: requestKey,
     });
     setSaving(false);
     if (result.error) { setError(result.error.message); return; }
     setNotice('Supplier payment recorded successfully.');
+    setIdempotencyKey('');
     setAmount(''); setReference(''); setNotes(''); setPurchaseId(''); setIsAdvance(false);
     await load();
   };
