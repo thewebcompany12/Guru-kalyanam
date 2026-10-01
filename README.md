@@ -164,3 +164,11 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Added school search, order-date filters, refresh/loading/error/empty states, and CSV export.
 - Uses existing orders and recorded payments; cancelled orders are excluded and paid amounts avoid double-counting linked payments.
 - Period filters use order dates; figures are an operational view, not a dated accounting statement. No database migration or production deployment.
+
+
+## Phase 47 — Payment receipts
+
+- Added a searchable receipt register for existing school payment records with date filters and school/order/reference search.
+- Added a phone-friendly receipt preview with school details, amount, payment method, reference, notes, and a stable receipt identifier.
+- Added browser print / Save PDF and native share support, with clipboard fallback where available.
+- Receipts are read-only and use existing payment records; no database migration or duplicate payment writes.
