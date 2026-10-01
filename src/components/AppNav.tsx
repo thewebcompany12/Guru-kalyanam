@@ -13,7 +13,7 @@ const items = [
   ['/products', 'Products', Package], ['/inventory', 'Inventory', Boxes], ['/suppliers', 'Suppliers', Users], ['/purchases', 'Purchases', Truck],
   ['/receivables', 'School receivables', AlertTriangle], ['/statements', 'School statements', FileText], ['/supplier-payments', 'Supplier payments', WalletCards],
   ['/supplier-statements', 'Supplier statements', FileText], ['/supplier-performance', 'Supplier performance', TrendingUp], ['/expenses', 'Expenses', WalletCards],
-  ['/deliveries', 'Deliveries', Truck], ['/payments', 'Payments', IndianRupee], ['/invoices', 'GST invoices', FileText],
+  ['/deliveries', 'Deliveries', Truck], ['/payments', 'Payments', IndianRupee], ['/payment-receipts', 'Payment receipts', FileText], ['/invoices', 'GST invoices', FileText],
   ['/whatsapp', 'WhatsApp', MessageCircle], ['/reminders', 'Reminders', CheckSquare], ['/tasks', 'Tasks', CheckSquare], ['/notifications', 'Notifications', Bell],
   ['/reports', 'Reports', BarChart3], ['/school-collection-performance', 'School collection performance', TrendingUp], ['/insights', 'Monthly insights', TrendingUp], ['/timeline', 'Timeline', ClipboardList], ['/settings', 'Settings', Settings],
 ] as const;
