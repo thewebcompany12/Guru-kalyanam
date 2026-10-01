@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CalendarDays, CheckCircle2, Clock3, LocateFixed, MapPin, Navigation, Play, Search, Square, X } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Clock3, LocateFixed, MapPin, Navigation, Play, Plus, Route, Search, Square, X } from 'lucide-react';
 import AppNav from '@/components/AppNav';
 import { createClient } from '@/lib/supabase';
 
@@ -26,6 +26,7 @@ export default function VisitsPage(){
  const [schoolId,setSchoolId]=useState('');
  const [filterSchool,setFilterSchool]=useState('');
  const [filterDate,setFilterDate]=useState('');
+ const [activeSession,setActiveSession]=useState<any>(null);
  const [active,setActive]=useState<any>(null);
  const [form,setForm]=useState<any>(emptyForm);
  const [loading,setLoading]=useState(true);
@@ -34,13 +35,17 @@ export default function VisitsPage(){
 
  const load=async()=>{
    setLoading(true); setError('');
-   const [s,v]=await Promise.all([
+   const [s,v,vs]=await Promise.all([
      client.from('schools').select('id,name').eq('status','ACTIVE').order('name'),
-     client.from('school_visits').select('*,schools(name)').order('started_at',{ascending:false}).limit(200)
+     client.from('school_visits').select('*,schools(name)').order('started_at',{ascending:false}).limit(500),
+     client.from('visit_sessions').select('*').order('started_at',{ascending:false}).limit(100)
    ]);
-   if(s.error||v.error)setError((s.error||v.error)?.message||'Unable to load visits');
+   if(s.error||v.error||vs.error)setError((s.error||v.error||vs.error)?.message||'Unable to load visits');
    setSchools(s.data||[]); setVisits(v.data||[]);
-   setActive((v.data||[]).find((x:any)=>!x.ended_at)||null);
+   const sessionRows=vs.data||[];
+   const currentSession=sessionRows.find((x:any)=>!x.ended_at)||null;
+   setActiveSession(currentSession);
+   setActive((v.data||[]).find((x:any)=>!x.ended_at&&x.session_id===currentSession?.id)||null);
    setLoading(false);
  };
 
@@ -63,12 +68,42 @@ export default function VisitsPage(){
  },[filtered]);
 
  const start=async()=>{
-   if(!schoolId){setError('Choose a school first');return}
    setSaving(true);setError('');
-   const saveVisit=async(latitude?:number,longitude?:number)=>{
-     const r=await client.from('school_visits').insert({
-       school_id:schoolId,
+   const user=(await client.auth.getUser()).data.user;
+   const saveSession=async(latitude?:number,longitude?:number)=>{
+     const r=await client.from('visit_sessions').insert({
+       visited_by:user?.id||null,
        started_at:new Date().toISOString(),
+       start_latitude:latitude??null,
+       start_longitude:longitude??null
+     }).select().single();
+     if(r.error){setError(r.error.message);setSaving(false);return}
+     setActiveSession(r.data);setSaving(false);await load();
+   };
+   if(navigator.geolocation){
+     navigator.geolocation.getCurrentPosition(
+       p=>saveSession(p.coords.latitude,p.coords.longitude),
+       ()=>saveSession(),
+       {enableHighAccuracy:true,timeout:10000,maximumAge:30000}
+     );
+   }else saveSession();
+ };
+
+ const addSchool=async()=>{
+   if(!activeSession){setError('Start today\'s visit first');return}
+   if(!schoolId){setError('Choose the school you have reached');return}
+   setSaving(true);setError('');
+   if(active){
+     const previous=await client.from('school_visits').update({ended_at:new Date().toISOString()}).eq('id',active.id);
+     if(previous.error){setError(previous.error.message);setSaving(false);return}
+   }
+   const saveVisit=async(latitude?:number,longitude?:number)=>{
+     const now=new Date().toISOString();
+     const r=await client.from('school_visits').insert({
+       session_id:activeSession.id,
+       school_id:schoolId,
+       visited_by:(await client.auth.getUser()).data.user?.id||null,
+       started_at:now,
        latitude:latitude??null,
        longitude:longitude??null,
        purpose:form.purpose,
@@ -79,7 +114,7 @@ export default function VisitsPage(){
        follow_up_required:form.follow_up_required
      }).select().single();
      if(r.error){setError(r.error.message);setSaving(false);return}
-     const schoolUpdate:any={last_visit_at:new Date().toISOString()};
+     const schoolUpdate:any={last_visit_at:now};
      if(form.follow_up_required&&form.follow_up_date)schoolUpdate.next_follow_up_at=new Date(form.follow_up_date+'T09:00:00').toISOString();
      else if(!form.follow_up_required)schoolUpdate.next_follow_up_at=null;
      await client.from('schools').update(schoolUpdate).eq('id',schoolId);
@@ -95,9 +130,14 @@ export default function VisitsPage(){
  };
 
  const end=async()=>{
-   if(!active)return;
+   if(!activeSession)return;
    setSaving(true);setError('');
-   const r=await client.from('school_visits').update({ended_at:new Date().toISOString()}).eq('id',active.id);
+   const now=new Date().toISOString();
+   if(active){
+     const visitEnd=await client.from('school_visits').update({ended_at:now}).eq('id',active.id);
+     if(visitEnd.error){setError(visitEnd.error.message);setSaving(false);return}
+   }
+   const r=await client.from('visit_sessions').update({ended_at:now}).eq('id',activeSession.id);
    if(r.error)setError(r.error.message);
    else await load();
    setSaving(false);
@@ -116,42 +156,34 @@ export default function VisitsPage(){
     <header className="mb-5">
       <p className="text-sm font-semibold text-emerald-600 flex items-center gap-1"><CalendarDays size={14}/>Field visit diary</p>
       <h1 className="text-3xl font-bold">School Visits</h1>
-      <p className="text-sm text-slate-500 mt-1">Record which school you visited, on which date, why you went, and what happened.</p>
+      <p className="text-sm text-slate-500 mt-1">Start one morning route, then add each school when you reach it. Every school gets its own arrival, GPS, notes, and visit details.</p>
     </header>
 
     {error&&<div className="mb-4 rounded-xl bg-red-50 text-red-700 p-3 text-sm">{error}</div>}
 
     <section className="card p-4 md:p-5 mb-5">
       <div className="flex items-center justify-between gap-3 mb-4">
-        <h2 className="font-bold flex items-center gap-2"><span className="section-icon bg-emerald-100 text-emerald-700"><Navigation size={16}/></span>New visit</h2>
-        {active&&<span className="text-xs font-bold rounded-full bg-emerald-50 text-emerald-700 px-3 py-1">Visit in progress</span>}
+        <div><h2 className="font-bold flex items-center gap-2"><span className="section-icon bg-emerald-100 text-emerald-700"><Route size={16}/></span>Today&apos;s visit route</h2><p className="text-xs text-slate-500 mt-1">{activeSession?'Morning route is running — add schools as you reach them.':'Start the route once in the morning. You do not need to start a new visit for every school.'}</p></div>
+        {activeSession&&<span className="text-xs font-bold rounded-full bg-emerald-50 text-emerald-700 px-3 py-1">Route in progress</span>}
       </div>
-      <div className="grid md:grid-cols-2 gap-3">
-        <select value={schoolId} onChange={e=>setSchoolId(e.target.value)} className="rounded-xl border px-3 py-3">
-          <option value="">Select school</option>
-          {schools.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-        <select value={form.purpose} onChange={e=>setForm({...form,purpose:e.target.value})} className="rounded-xl border px-3 py-3">
-          <option value="GENERAL">General visit</option><option value="SALES">Sales / order</option><option value="DELIVERY">Delivery</option><option value="PAYMENT_COLLECTION">Payment collection</option><option value="FOLLOW_UP">Follow-up</option>
-        </select>
-        <input value={form.person_met} onChange={e=>setForm({...form,person_met:e.target.value})} placeholder="Person met (e.g. Principal)" className="rounded-xl border px-3 py-3"/>
-        <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Notes: what happened, what was discussed…" className="rounded-xl border px-3 py-3 md:row-span-2"/>
-      </div>
-      {form.follow_up_required&&<label className="mt-3 block text-sm font-medium">Next follow-up date<input type="date" value={form.follow_up_date} onChange={e=>setForm({...form,follow_up_date:e.target.value})} className="mt-1 w-full rounded-xl border px-3 py-3"/><span className="text-xs text-slate-500">Saved on the school and shown in Follow-up Planner.</span></label>}
-      <div className="flex flex-wrap gap-2 mt-3">
-        {([['order_received','Order received'],['payment_collected','Payment collected'],['follow_up_required','Follow-up needed']] as const).map(([key,label])=><label key={key} className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-2 text-sm"><input type="checkbox" checked={form[key]} onChange={e=>setForm({...form,[key]:e.target.checked})} className="h-4 w-4"/>{label}</label>)}
-      </div>
-      <div className="mt-4 flex flex-col sm:flex-row gap-2">
-        {active
-          ? <button disabled={saving} onClick={end} className="flex-1 rounded-xl bg-amber-600 text-white px-5 py-3 font-semibold flex items-center justify-center gap-2"><Square size={17}/>{saving?'Saving…':'End current visit'}</button>
-          : <button disabled={saving} onClick={start} className="flex-1 rounded-xl bg-gradient-to-r from-emerald-600 to-sky-500 text-white px-5 py-3 font-semibold flex items-center justify-center gap-2 shadow-lg shadow-emerald-100"><Play size={17}/>{saving?'Starting…':'Start visit & capture GPS'}</button>}
-      </div>
-      <p className="text-xs text-slate-500 mt-3 flex gap-1 items-center"><LocateFixed size={13}/>GPS is captured when available; the visit is still saved if location permission is denied.</p>
+      {!activeSession ? <button disabled={saving} onClick={start} className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-sky-500 text-white px-5 py-3 font-semibold flex items-center justify-center gap-2 shadow-lg shadow-emerald-100"><Play size={17}/>{saving?'Starting…':'Start morning visit route & capture GPS'}</button> : <>
+        <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-3 mb-4 text-sm text-emerald-800 flex items-start gap-2"><Route size={17} className="mt-0.5 shrink-0"/><span>Started at <b>{formatTime(activeSession.started_at)}</b>. {active?'Currently at '+(active.schools?.name||'the selected school')+'. Add the next school when you leave.':'Choose the school you have reached and add it below.'}</span></div>
+        <div className="grid md:grid-cols-2 gap-3">
+          <select value={schoolId} onChange={e=>setSchoolId(e.target.value)} className="rounded-xl border px-3 py-3"><option value="">Select school reached</option>{schools.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select>
+          <select value={form.purpose} onChange={e=>setForm({...form,purpose:e.target.value})} className="rounded-xl border px-3 py-3"><option value="GENERAL">General visit</option><option value="SALES">Sales / order</option><option value="DELIVERY">Delivery</option><option value="PAYMENT_COLLECTION">Payment collection</option><option value="FOLLOW_UP">Follow-up</option></select>
+          <input value={form.person_met} onChange={e=>setForm({...form,person_met:e.target.value})} placeholder="Person met (e.g. Principal)" className="rounded-xl border px-3 py-3"/>
+          <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Notes: what happened, what was discussed…" className="rounded-xl border px-3 py-3 md:row-span-2"/>
+        </div>
+        {form.follow_up_required&&<label className="mt-3 block text-sm font-medium">Next follow-up date<input type="date" value={form.follow_up_date} onChange={e=>setForm({...form,follow_up_date:e.target.value})} className="mt-1 w-full rounded-xl border px-3 py-3"/><span className="text-xs text-slate-500">Saved on the school and shown in Follow-up Planner.</span></label>}
+        <div className="flex flex-wrap gap-2 mt-3">{([['order_received','Order received'],['payment_collected','Payment collected'],['follow_up_required','Follow-up needed']] as const).map(([key,label])=><label key={key} className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-2 text-sm"><input type="checkbox" checked={form[key]} onChange={e=>setForm({...form,[key]:e.target.checked})} className="h-4 w-4"/>{label}</label>)}</div>
+        <div className="mt-4 flex flex-col sm:flex-row gap-2"><button disabled={saving||!schoolId} onClick={addSchool} className="flex-1 rounded-xl bg-emerald-600 text-white px-5 py-3 font-semibold flex items-center justify-center gap-2 disabled:opacity-50"><Plus size={17}/>{saving?'Saving…':'Add reached school'}</button><button disabled={saving} onClick={end} className="sm:w-48 rounded-xl bg-amber-600 text-white px-5 py-3 font-semibold flex items-center justify-center gap-2"><Square size={17}/>{saving?'Saving…':'End morning route'}</button></div>
+        <p className="text-xs text-slate-500 mt-3 flex gap-1 items-center"><LocateFixed size={13}/>GPS is captured when available for the route start and each school arrival. If location permission is denied, the visit is still saved.</p>
+      </>}
     </section>
 
     <section className="card p-4 md:p-5">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
-        <div><h2 className="font-bold">Visit history</h2><p className="text-xs text-slate-500 mt-1">{filtered.length} visit{filtered.length===1?'':'s'} shown</p></div>
+        <div><h2 className="font-bold">Visit history</h2><p className="text-xs text-slate-500 mt-1">{filtered.length} school visit{filtered.length===1?'':'s'} shown · each route can contain multiple schools</p></div>
         <div className="flex flex-col sm:flex-row gap-2">
           <select value={filterSchool} onChange={e=>setFilterSchool(e.target.value)} className="rounded-xl border px-3 py-2.5 text-sm"><option value="">All schools</option>{schools.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select>
           <label className="relative"><Search size={15} className="absolute left-3 top-3 text-slate-400"/><input type="date" value={filterDate} onChange={e=>setFilterDate(e.target.value)} className="rounded-xl border pl-9 pr-3 py-2.5 text-sm"/></label>
