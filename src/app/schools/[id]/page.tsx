@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, LocateFixed, MapPin, Phone, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, History, LocateFixed, MapPin, Phone, Plus, Trash2 } from 'lucide-react';
 import AppNav from '@/components/AppNav';
 import { createClient } from '@/lib/supabase';
 
@@ -26,7 +26,7 @@ export default function SchoolDetail(){
  const bbox=school.latitude&&school.longitude?(school.longitude-0.004)+','+(school.latitude-0.004)+','+(school.longitude+0.004)+','+(school.latitude+0.004):null;
  return <div className="min-h-screen flex bg-slate-50"><AppNav/><main className="flex-1 p-4 md:p-8"><div className="max-w-6xl mx-auto">
   <Link href="/schools" className="text-sm text-slate-500 flex items-center gap-1 mb-4"><ArrowLeft size={15}/>Back to schools</Link>
-  <header className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-3"><div><p className="text-sm text-slate-500">{school.school_type} · {school.status}</p><h1 className="text-3xl font-bold">{school.name}</h1><p className="text-slate-600">{school.address||'No address'}{school.district?' · '+school.district:''}</p></div><div className="flex gap-2">{active?<button onClick={end} className="rounded-xl bg-amber-600 text-white px-4 py-3 font-semibold">End active visit</button>:<button onClick={start} className="rounded-xl bg-emerald-600 text-white px-4 py-3 font-semibold">Start visit</button>}<button onClick={saveLocation} className="rounded-xl border bg-white px-4 py-3 flex gap-2 items-center"><LocateFixed size={17}/>Save location</button></div></header>
+  <header className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-3"><div><p className="text-sm text-slate-500">{school.school_type} · {school.status}</p><h1 className="text-3xl font-bold">{school.name}</h1><p className="text-slate-600">{school.address||'No address'}{school.district?' · '+school.district:''}</p></div><div className="flex flex-wrap gap-2"><Link href={'/schools/'+id+'/timeline'} className="rounded-xl border bg-white px-4 py-3 flex gap-2 items-center"><History size={17}/>School timeline</Link>{active?<button onClick={end} className="rounded-xl bg-amber-600 text-white px-4 py-3 font-semibold">End active visit</button>:<button onClick={start} className="rounded-xl bg-emerald-600 text-white px-4 py-3 font-semibold">Start visit</button>}<button onClick={saveLocation} className="rounded-xl border bg-white px-4 py-3 flex gap-2 items-center"><LocateFixed size={17}/>Save location</button></div></header>
   {error&&<p className="mb-4 rounded-xl bg-red-50 text-red-700 p-3 text-sm">{error}</p>}
   <div className="grid lg:grid-cols-3 gap-5">
    <section className="card p-5 lg:col-span-2"><h2 className="font-bold mb-4">Location</h2>{bbox?<iframe title="School map" className="w-full h-72 rounded-xl border" src={'https://www.openstreetmap.org/export/embed.html?bbox='+bbox+'&layer=mapnik&marker='+school.latitude+','+school.longitude}/>:<div className="h-40 grid place-items-center bg-slate-50 rounded-xl text-slate-500">No coordinates yet. Save the current location.</div>}{location&&<p className="text-xs text-slate-500 mt-3">Last GPS capture: {new Date(location.captured_at).toLocaleString()} · ±{Math.round(location.accuracy_meters||0)}m</p>}</section>

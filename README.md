@@ -69,3 +69,4 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Added a unified work queue for open tasks, reminders and unread notifications.
 - Added overdue counts, next-up work, one-tap completion and quick links into existing workspaces.
 - Added responsive mobile/desktop prioritization with refresh and explicit error states.
+\n\n## Phase 26 · School Activity Timeline\n- Added a per-school history workspace combining visits, orders, preparation status, deliveries, payments, reminders, and audit activity.\n- Added event-type summaries, search, filters, refresh, status context, and deep links back to related orders.\n- Added a direct School timeline action from each school record.\n
