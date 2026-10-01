@@ -110,3 +110,12 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Inventory low-stock indicators use each product's configured minimum stock.
 - Inventory cards include reorder-gap units and estimated on-hand stock cost.
 - Filtered inventory exports to CSV with stock, reorder and cost fields.
+
+
+## Phase 40 — workspace UI redesign
+
+- Refreshed the global design system with consistent surfaces, typography, responsive spacing, form focus states, tables, buttons and motion.
+- Updated dashboard cards and action surfaces with polished hover/press feedback and restrained entrance animations.
+- Organized the desktop sidebar into labeled navigation groups while preserving every existing destination.
+- Improved small-screen surfaces and navigation styling, with reduced-motion accessibility support.
+- Styling-only changes; no database migration or schema changes.
