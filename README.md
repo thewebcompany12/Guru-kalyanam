@@ -79,3 +79,12 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Each school keeps its own arrival time, GPS, purpose, person met, notes, order/payment/follow-up details.
 - End the route once the day's school visits are complete.
 - Existing single-school visit records remain supported through a nullable session link.
+
+
+## Phase 28 — GST invoices
+
+- Create one GST-ready invoice from each order.
+- Automatic CGST + SGST for same-state billing and IGST for other-state billing.
+- Invoice numbering, seller details, buyer snapshot, tax breakdown, and invoice register.
+- Print / Save PDF from the invoice detail screen.
+- Invoice and line-item tables use RLS and preserve the source order records.
