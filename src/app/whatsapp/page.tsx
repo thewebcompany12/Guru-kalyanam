@@ -18,7 +18,7 @@ export default function WhatsApp(){
   s.from('school_contacts').select('id,school_id,name,phone,whatsapp_number,schools(name)').not('whatsapp_number','is',null).order('name'),
   s.from('whatsapp_templates').select('id,name,body,language,active').eq('active',true).order('name'),
   s.from('whatsapp_messages').select('id,recipient_name,recipient_phone,message_body,status,scheduled_at,sent_at,schools(name)').order('created_at',{ascending:false}).limit(100)
- ]); if(c.error||t.error||m.error)setError(c.error?.message||t.error?.message||m.error?.message||'Unable to load WhatsApp workspace'); setContacts((c.data||[]) as Contact[]);setTemplates((t.data||[]) as Template[]);setMessages((m.data||[]) as Message[]);setBusy(false)};
+ ]); if(c.error||t.error||m.error)setError(c.error?.message||t.error?.message||m.error?.message||'Unable to load WhatsApp workspace'); setContacts(((c.data||[]) as unknown as Array<Contact & {schools:{name:string}[]|{name:string}|null}>).map(x=>({...x,schools:Array.isArray(x.schools)?(x.schools[0]||null):x.schools})));setTemplates((t.data||[]) as Template[]);setMessages(((m.data||[]) as unknown as Array<Message & {schools:{name:string}[]|{name:string}|null}>).map(x=>({...x,schools:Array.isArray(x.schools)?(x.schools[0]||null):x.schools})));setBusy(false)};
  useEffect(()=>{void load()},[]);
  useEffect(()=>{const t=templates.find(x=>x.id===templateId); if(t)setBody(render(t.body,{school:contacts.find(x=>x.id===contactId)?.schools?.name||'School',order_number:'{{order_number}}',amount:'{{amount}}'}))},[templateId,contactId,templates,contacts]);
  const visible=useMemo(()=>contacts.filter(c=>(c.name+' '+(c.schools?.name||'')).toLowerCase().includes(search.toLowerCase())),[contacts,search]);
