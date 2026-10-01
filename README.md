@@ -198,3 +198,9 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Added a read-only receiving register showing ordered, received, and outstanding quantities by supplier and purchase order.
 - Added overdue expected-arrival flags, status/search/date filters, summary metrics, refresh, and CSV export.
 - Uses existing purchases and purchase_items data; no database migration or duplicate stock records required.
+
+
+## Phase 52 — Procurement Cost Insights
+- Added purchasing spend summaries, monthly spend bars, supplier spend comparison, and highest-cost product analysis.
+- Added search, purchase-date filters, refresh, and line-level CSV export.
+- Uses existing purchases and purchase_items data; read-only and no database migration required.
