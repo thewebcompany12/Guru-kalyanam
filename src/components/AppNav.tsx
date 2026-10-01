@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { School, LayoutDashboard, ClipboardList, IndianRupee, BarChart3, ListTodo, Bell, Search, Users, Package, Truck, WalletCards, Settings, MapPin, FileText, TrendingUp, AlertTriangle, CalendarClock, Boxes, CheckSquare, MessageCircle, X, ChevronRight } from 'lucide-react';
+import { School, LayoutDashboard, ClipboardList, IndianRupee, BarChart3, ListTodo, Bell, Users, Package, Truck, WalletCards, Settings, MapPin, FileText, TrendingUp, AlertTriangle, CalendarClock, Boxes, CheckSquare, MessageCircle, X, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import GlobalSearch from '@/components/GlobalSearch';
 
