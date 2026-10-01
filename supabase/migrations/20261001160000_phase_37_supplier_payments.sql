@@ -28,7 +28,10 @@ alter table public.supplier_payments enable row level security;
 drop policy if exists "Authenticated users can read supplier payments" on public.supplier_payments;
 create policy "Authenticated users can read supplier payments"
   on public.supplier_payments for select to authenticated
-  using ((select auth.uid()) is not null);
+  using (
+    (select auth.uid()) is not null
+    and coalesce(((select auth.jwt()) ->> 'is_anonymous')::boolean, false) = false
+  );
 
 revoke all on public.supplier_payments from anon, authenticated;
 grant select on public.supplier_payments to authenticated;
@@ -104,7 +107,9 @@ declare
   v_applied numeric(14,2) := 0;
   v_advance numeric(14,2) := 0;
 begin
-  if auth.uid() is null or not private.has_write_access() then
+  if auth.uid() is null
+    or coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false)
+    or not private.has_write_access() then
     raise exception 'Write access required';
   end if;
   if p_supplier_id is null or p_idempotency_key is null then
