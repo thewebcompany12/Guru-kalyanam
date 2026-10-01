@@ -9,6 +9,7 @@ create table if not exists public.supplier_payments (
   reference_number text null,
   notes text null,
   is_advance boolean not null default false,
+  allow_overpayment boolean not null default false,
   idempotency_key uuid not null unique,
   created_by uuid null references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
@@ -100,7 +101,7 @@ declare
   v_existing_mode text;
   v_existing_reference text;
   v_existing_notes text;
-  v_existing_is_advance boolean;
+  v_existing_allow_overpayment boolean;
   v_purchase_supplier_id uuid;
   v_purchase_status text;
   v_due numeric(14,2);
@@ -126,9 +127,9 @@ begin
   end if;
 
   select id, supplier_id, purchase_id, amount, payment_date, payment_mode,
-         reference_number, notes, is_advance
+         reference_number, notes, allow_overpayment
     into v_payment_id, v_existing_supplier_id, v_existing_purchase_id, v_existing_amount,
-         v_existing_date, v_existing_mode, v_existing_reference, v_existing_notes, v_existing_is_advance
+         v_existing_date, v_existing_mode, v_existing_reference, v_existing_notes, v_existing_allow_overpayment
     from public.supplier_payments where idempotency_key = p_idempotency_key;
   if v_payment_id is not null then
     if v_existing_supplier_id <> p_supplier_id
@@ -138,7 +139,7 @@ begin
       or v_existing_mode <> p_payment_mode
       or v_existing_reference is distinct from nullif(trim(p_reference_number), '')
       or v_existing_notes is distinct from nullif(trim(p_notes), '')
-      or v_existing_is_advance <> coalesce(p_is_advance, false) then
+      or v_existing_allow_overpayment <> coalesce(p_is_advance, false) then
       raise exception 'Idempotency key was already used for a different payment';
     end if;
     return v_payment_id;
@@ -150,9 +151,9 @@ begin
   -- Recheck after the supplier lock so simultaneous retries with the same key
   -- return the first committed payment instead of surfacing a unique-key error.
   select id, supplier_id, purchase_id, amount, payment_date, payment_mode,
-         reference_number, notes, is_advance
+         reference_number, notes, allow_overpayment
     into v_payment_id, v_existing_supplier_id, v_existing_purchase_id, v_existing_amount,
-         v_existing_date, v_existing_mode, v_existing_reference, v_existing_notes, v_existing_is_advance
+         v_existing_date, v_existing_mode, v_existing_reference, v_existing_notes, v_existing_allow_overpayment
     from public.supplier_payments where idempotency_key = p_idempotency_key;
   if v_payment_id is not null then
     if v_existing_supplier_id <> p_supplier_id
@@ -162,7 +163,7 @@ begin
       or v_existing_mode <> p_payment_mode
       or v_existing_reference is distinct from nullif(trim(p_reference_number), '')
       or v_existing_notes is distinct from nullif(trim(p_notes), '')
-      or v_existing_is_advance <> coalesce(p_is_advance, false) then
+      or v_existing_allow_overpayment <> coalesce(p_is_advance, false) then
       raise exception 'Idempotency key was already used for a different payment';
     end if;
     return v_payment_id;
@@ -190,12 +191,12 @@ begin
 
   insert into public.supplier_payments (
     supplier_id, purchase_id, payment_date, amount, payment_mode,
-    reference_number, notes, is_advance, idempotency_key, created_by
+    reference_number, notes, is_advance, allow_overpayment, idempotency_key, created_by
   ) values (
     p_supplier_id, p_purchase_id, coalesce(p_payment_date, current_date), p_amount,
     p_payment_mode, nullif(trim(p_reference_number), ''), nullif(trim(p_notes), ''),
     (coalesce(p_is_advance, false) and (p_purchase_id is null or v_advance > 0)),
-    p_idempotency_key, auth.uid()
+    coalesce(p_is_advance, false), p_idempotency_key, auth.uid()
   ) returning id into v_payment_id;
 
   if p_purchase_id is not null and v_applied > 0 then
