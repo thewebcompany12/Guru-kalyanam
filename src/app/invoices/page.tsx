@@ -18,7 +18,7 @@ export default function InvoicesPage(){
   supabase.from('orders').select('id,order_number,school_id,order_date,total,subtotal,discount,tax_amount,school:schools(id,name,address,state)').order('created_at',{ascending:false}),
   supabase.from('invoices').select('*,school:schools(name),order:orders(order_number)').order('created_at',{ascending:false})
  ]);if(o.error||i.error)setError((o.error||i.error)?.message||'Unable to load invoices');setOrders(o.data||[]);setInvoices(i.data||[]);setLoading(false)};
- useEffect(()=>{load()},[]);
+ useEffect(()=>{load();(async()=>{const {data:{user}}=await supabase.auth.getUser();if(!user)return;const {data}=await supabase.from('business_settings').select('business_name,gstin,address,state,state_code').eq('user_id',user.id).maybeSingle();if(data){setSeller(data.business_name||'Guru Kalyanam');setGstin(data.gstin||'');setSellerAddress(data.address||'');setSellerState(data.state||'Uttar Pradesh');setSellerCode(data.state_code||'09')}})()},[]);
  const selected=orders.find(o=>o.id===orderId);
  const createInvoice=async()=>{
   if(!selected){setError('Select an order.');return} setSaving(true);setError('');
