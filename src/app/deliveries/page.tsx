@@ -57,7 +57,14 @@ export default function Deliveries() {
     ]);
     if (d.error) setError(d.error.message);
     else setRows((d.data || []) as unknown as Delivery[]);
-    setOrders((o.data || []) as Order[]);
+    const normalizedOrders = (o.data || []).map((item) => {
+      const order = item as unknown as Order & { school: { name: string } | { name: string }[] | null };
+      return {
+        ...order,
+        school: Array.isArray(order.school) ? order.school[0] ?? null : order.school,
+      };
+    });
+    setOrders(normalizedOrders);
     setProfiles((p.data || []) as Profile[]);
     setLoading(false);
   };
