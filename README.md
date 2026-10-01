@@ -141,3 +141,10 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Added a school-wise chronological statement combining recorded order charges and collection entries.
 - Added date-range filtering, opening/closing balance summaries, print-friendly output, and CSV export.
 - Statements use existing orders and payments only; no schema migration or production deployment.
+
+
+## Phase 44 — Supplier account statements
+
+- Added a supplier-wise ledger of purchase charges, recorded payments, and advances.
+- Added date-range filtering, opening/closing balance summaries, print-friendly output, and CSV export.
+- Statements use existing purchases and supplier payment records; no schema migration or production deployment.
