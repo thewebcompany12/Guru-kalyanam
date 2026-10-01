@@ -16,7 +16,7 @@ const money = (n: number) => '₹' + Number(n || 0).toLocaleString('en-IN', { mi
 const vendor = (p: Purchase) => Array.isArray(p.suppliers) ? p.suppliers[0]?.name || 'Supplier' : p.suppliers?.name || 'Supplier';
 
 export default function PurchasesPage() {
-  const db = createClient();
+  const db = useMemo(() => createClient(), []);
   const [rows, setRows] = useState<Purchase[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
