@@ -9,7 +9,7 @@ import GlobalSearch from '@/components/GlobalSearch';
 const items = [
   ['/', 'Dashboard', LayoutDashboard], ['/work-queue', 'Work queue', ListTodo],
   ['/schools', 'Schools', School], ['/visits', 'Visits', CheckSquare], ['/follow-ups', 'Follow-ups', CalendarClock], ['/map', 'Field map', MapPin],
-  ['/orders', 'Orders', ClipboardList], ['/pipeline', 'Sales pipeline', TrendingUp], ['/templates', 'Order templates', FileText],
+  ['/orders', 'Orders', ClipboardList], ['/order-fulfilment', 'Order fulfilment monitor', Truck], ['/pipeline', 'Sales pipeline', TrendingUp], ['/templates', 'Order templates', FileText],
   ['/products', 'Products', Package], ['/inventory', 'Inventory', Boxes], ['/stock-movements', 'Stock movement ledger', Boxes], ['/suppliers', 'Suppliers', Users], ['/purchases', 'Purchases', Truck],
   ['/receivables', 'School receivables', AlertTriangle], ['/statements', 'School statements', FileText], ['/supplier-payments', 'Supplier payments', WalletCards], ['/supplier-payment-vouchers', 'Supplier payment vouchers', FileText],
   ['/supplier-statements', 'Supplier statements', FileText], ['/supplier-performance', 'Supplier performance', TrendingUp], ['/expenses', 'Expenses', WalletCards],
@@ -19,7 +19,7 @@ const items = [
 ] as const;
 const groups:[string,string[]][]=[
  ['OVERVIEW',['/','/work-queue']],['FIELD OPERATIONS',['/schools','/visits','/follow-ups','/map']],
- ['SALES & ORDERS',['/orders','/pipeline','/templates']],['CATALOG & SUPPLIERS',['/products','/inventory','/stock-movements','/suppliers','/purchases']],
+ ['SALES & ORDERS',['/orders','/order-fulfilment','/pipeline','/templates']],['CATALOG & SUPPLIERS',['/products','/inventory','/stock-movements','/suppliers','/purchases']],
  ['MONEY & FULFILMENT',['/receivables','/statements','/supplier-payments','/supplier-payment-vouchers','/supplier-statements','/supplier-performance','/expenses','/deliveries','/payments','/invoices']],
  ['COMMUNICATION & TASKS',['/whatsapp','/reminders','/tasks','/notifications']],['INSIGHTS & SETTINGS',['/reports','/insights','/timeline','/settings']]
 ];
