@@ -103,3 +103,10 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Added a dedicated operating-expense ledger with categories, date/mode filters, search, edit/delete controls, and CSV export.
 - Expenses are stored separately from school collections and supplier payments with row-level security and write-access checks.
 - Reports include supplier payments, operating expenses, and net cash movement for the selected period. Net cash movement is explicitly a cash-flow measure, not accounting profit.
+
+
+## Phase 39 — Inventory reorder planning
+
+- Inventory low-stock indicators use each product's configured minimum stock.
+- Inventory cards include reorder-gap units and estimated on-hand stock cost.
+- Filtered inventory exports to CSV with stock, reorder and cost fields.
