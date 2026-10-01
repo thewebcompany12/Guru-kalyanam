@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import AppNav from '@/components/AppNav';
 import { createClient } from '@/lib/supabase';
-import { CalendarDays, CheckCircle2, Clock3, Filter, PackageCheck, RefreshCw, Search, Truck, XCircle } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Clock3, Download, Filter, PackageCheck, RefreshCw, Search, Truck, XCircle } from 'lucide-react';
 
 type Delivery = {
   id: string;
@@ -43,6 +43,8 @@ export default function Deliveries() {
   const [notes, setNotes] = useState('');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('ALL');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -75,15 +77,32 @@ export default function Deliveries() {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
       if (filter !== 'ALL' && r.status !== filter) return false;
+      if (dateFrom && (!r.scheduled_date || r.scheduled_date < dateFrom)) return false;
+      if (dateTo && (!r.scheduled_date || r.scheduled_date > dateTo)) return false;
       if (!q) return true;
       return [r.school?.name, r.order?.order_number, r.status, r.delivery_notes].filter(Boolean).join(' ').toLowerCase().includes(q);
     });
-  }, [rows, search, filter]);
+  }, [rows, search, filter, dateFrom, dateTo]);
 
   const counts = useMemo(() => statuses.reduce<Record<string, number>>((acc, s) => {
     acc[s] = rows.filter((r) => r.status === s).length;
     return acc;
   }, {}), [rows]);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const overdueCount = rows.filter((r) => r.scheduled_date && r.scheduled_date < today && !['DELIVERED', 'FAILED'].includes(r.status)).length;
+  const exportCsv = () => {
+    const escapeCsv = (value: unknown) => '"' + String(value ?? '').replace(/"/g, '""') + '"';
+    const header = ['School', 'Order number', 'Amount', 'Scheduled date', 'Scheduled time', 'Status', 'Assigned to', 'Delivered at', 'Notes'];
+    const data = visible.map((r) => [r.school?.name, r.order?.order_number, r.order?.total, r.scheduled_date, r.scheduled_time, statusMeta[r.status]?.label || r.status, profiles.find((p) => p.id === r.responsible_user_id)?.full_name, r.delivered_at, r.delivery_notes]);
+    const csv = [header, ...data].map((line) => line.map(escapeCsv).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'guru-kalyanam-deliveries.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const create = async () => {
     if (!orderId) { setError('Select an order.'); return; }
@@ -135,7 +154,9 @@ export default function Deliveries() {
 
           {error && <div className="rounded-xl bg-red-50 border border-red-100 p-3 text-sm text-red-700">{error}</div>}
 
-          <section className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+          <section className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
+            <button onClick={() => setFilter('ALL')} className="card p-3 text-left transition hover:-translate-y-0.5"><div className="text-xl font-bold">{rows.length}</div><p className="text-xs text-slate-500 mt-2">All deliveries</p></button>
+            <button onClick={() => { setFilter('ALL'); setDateFrom(''); setDateTo(''); }} className="card p-3 text-left transition hover:-translate-y-0.5"><div className="text-xl font-bold text-rose-600">{overdueCount}</div><p className="text-xs text-slate-500 mt-2">Past due</p></button>
             {statuses.map((s) => { const M = statusMeta[s]; const Icon = M.icon; return (
               <button key={s} onClick={() => setFilter(filter === s ? 'ALL' : s)} className={`card p-3 text-left transition ${filter === s ? 'ring-2 ring-lime-500' : ''}`}>
                 <div className="flex items-center justify-between"><span className={`grid h-8 w-8 place-items-center rounded-lg ${M.tone}`}><Icon size={16} /></span><b className="text-xl">{counts[s] || 0}</b></div>
@@ -165,9 +186,12 @@ export default function Deliveries() {
           </section>
 
           <section className="card p-4">
-            <div className="grid gap-2 md:grid-cols-[1fr_180px] mb-4">
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[1fr_180px_160px_160px_auto] mb-4">
               <label className="relative"><Search size={16} className="absolute left-3 top-3 text-slate-400" /><input className="w-full border rounded-xl px-9 py-2.5 text-sm" placeholder="Search school, order or delivery note…" value={search} onChange={(e) => setSearch(e.target.value)} /></label>
               <select className="border rounded-xl px-3 py-2.5 text-sm" value={filter} onChange={(e) => setFilter(e.target.value)}><option value="ALL">All statuses</option>{statuses.map((s) => <option key={s} value={s}>{statusMeta[s].label}</option>)}</select>
+              <input aria-label="Scheduled from date" className="border rounded-xl px-3 py-2.5 text-sm" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+              <input aria-label="Scheduled to date" className="border rounded-xl px-3 py-2.5 text-sm" type="date" value={dateTo} min={dateFrom || undefined} onChange={(e) => setDateTo(e.target.value)} />
+              <button onClick={exportCsv} className="inline-flex items-center justify-center gap-2 border rounded-xl px-3 py-2.5 text-sm font-semibold hover:bg-slate-50"><Download size={15}/> Export CSV</button>
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-500 mb-3"><Filter size={14} /> Showing {visible.length} of {rows.length} deliveries</div>
             {loading ? <div className="py-12 text-center text-slate-500">Loading deliveries…</div> : !visible.length ? <div className="py-12 text-center text-slate-500">No deliveries match the current filters.</div> : (
