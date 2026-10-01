@@ -180,3 +180,9 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Added printable voucher preview with supplier details, amount, payment mode, advance classification, purchase order and transaction reference.
 - Added Print / Save PDF, native phone sharing with clipboard fallback, and filtered CSV export.
 - Vouchers are read-only; no duplicate payment records and no database migration.
+
+
+## Phase 49 — Stock Movement Ledger
+- Added a read-only stock movement audit trail with product/SKU/note search, movement-type and date filters.
+- Added positive/negative quantity summaries, refresh, responsive table layout, and CSV export.
+- Uses existing `inventory_transactions` and `products` data; no database migration or schema changes required.
