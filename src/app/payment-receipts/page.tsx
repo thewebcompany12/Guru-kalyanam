@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import AppNav from '@/components/AppNav';
 import { createClient } from '@/lib/supabase';
 import { Printer, Search, ReceiptText, RefreshCw, Share2 } from 'lucide-react';
-import SearchableSelect from '@/components/SearchableSelect';
 
 type School={id:string;name:string;address?:string|null;udise_code?:string|null};
 type Order={id:string;order_number:number;school_id:string;total:number};
