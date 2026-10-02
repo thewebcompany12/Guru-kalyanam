@@ -1,5 +1,89 @@
--- Phase 53: block anonymous sessions from shared business records and write RPCs.
--- The workspace has a registered owner account; guest sessions must not read shared records.
+-- Phase 53: require an active, registered workspace member for shared business data.
+-- New registrations start inactive and must be approved by an owner/admin.
+
+alter table public.profiles
+  add column if not exists email text,
+  add column if not exists is_active boolean not null default false;
+
+update public.profiles p
+set email = u.email,
+    is_active = (
+      not coalesce(u.is_anonymous, false)
+      and p.role in ('OWNER'::public.user_role, 'ADMIN'::public.user_role, 'SALES_PERSON'::public.user_role, 'DELIVERY_PERSON'::public.user_role)
+    )
+from auth.users u
+where u.id = p.id;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_role public.user_role;
+  v_active boolean;
+begin
+  perform pg_catalog.pg_advisory_xact_lock(873421);
+  if not coalesce(new.is_anonymous, false)
+     and not exists (select 1 from public.profiles) then
+    v_role := 'OWNER'::public.user_role;
+    v_active := true;
+  else
+    v_role := 'VIEWER'::public.user_role;
+    v_active := false;
+  end if;
+
+  insert into public.profiles (id, full_name, email, role, is_active)
+  values (
+    new.id,
+    coalesce(nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''), new.email),
+    new.email,
+    v_role,
+    v_active
+  )
+  on conflict (id) do update set email = excluded.email;
+  return new;
+end;
+$function$;
+
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
+
+create or replace function private.has_workspace_access()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  select
+    coalesce(((select auth.jwt()) ->> 'is_anonymous')::boolean, false) = false
+    and exists (
+      select 1 from public.profiles
+      where id = (select auth.uid()) and is_active = true
+    );
+$function$;
+revoke execute on function private.has_workspace_access() from public, anon;
+grant execute on function private.has_workspace_access() to authenticated;
+
+create or replace function private.has_admin_access()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  select
+    coalesce(((select auth.jwt()) ->> 'is_anonymous')::boolean, false) = false
+    and exists (
+      select 1 from public.profiles
+      where id = (select auth.uid())
+        and is_active = true
+        and role in ('OWNER'::public.user_role, 'ADMIN'::public.user_role)
+    );
+$function$;
+revoke execute on function private.has_admin_access() from public, anon;
+grant execute on function private.has_admin_access() to authenticated;
 
 create or replace function private.has_write_access()
 returns boolean
@@ -14,6 +98,7 @@ as $function$
       select 1
       from public.profiles
       where id = (select auth.uid())
+        and is_active = true
         and role in (
           'OWNER'::public.user_role,
           'ADMIN'::public.user_role,
@@ -23,8 +108,8 @@ as $function$
     );
 $function$;
 
--- Restrict every broad SELECT policy that relied only on auth.uid() being non-null.
--- Supabase anonymous users also have a UID and use the authenticated database role.
+-- Replace broad SELECT policies that previously treated any non-null auth.uid()
+-- as sufficient. Supabase anonymous users also have a UID and use the authenticated role.
 do $migration$
 declare
   p record;
@@ -40,39 +125,14 @@ begin
   loop
     execute format('drop policy %I on %I.%I', p.policyname, p.schemaname, p.tablename);
     execute format(
-      'create policy %I on %I.%I for select to authenticated using ((%s) and coalesce(((select auth.jwt()) ->> ''is_anonymous'')::boolean, false) = false)',
+      'create policy %I on %I.%I for select to authenticated using ((%s) and (select private.has_workspace_access()))',
       p.policyname, p.schemaname, p.tablename, p.qual
     );
   end loop;
 end
 $migration$;
 
--- Invoice policies were accidentally granted to PUBLIC. Narrow them to registered
--- authenticated users and explicitly reject anonymous JWTs for write operations too.
-do $migration$
-declare
-  p record;
-begin
-  for p in
-    select schemaname, tablename, policyname, qual, with_check
-    from pg_policies
-    where schemaname = 'public'
-      and tablename in ('invoices', 'invoice_items')
-      and cmd = 'ALL'
-      and qual is not null
-      and qual ilike '%has_write_access%'
-  loop
-    execute format('drop policy %I on %I.%I', p.policyname, p.schemaname, p.tablename);
-    execute format(
-      'create policy %I on %I.%I for all to authenticated using ((%s) and coalesce(((select auth.jwt()) ->> ''is_anonymous'')::boolean, false) = false) with check ((%s) and coalesce(((select auth.jwt()) ->> ''is_anonymous'')::boolean, false) = false)',
-      p.policyname, p.schemaname, p.tablename, p.qual, coalesce(p.with_check, p.qual)
-    );
-  end loop;
-end
-$migration$;
-
--- A few communication tables used unconditional SELECT policies; guest sessions
--- must not read recipient numbers, message content, or reusable business templates.
+-- Also secure unconditional SELECT policies (WhatsApp message content/templates).
 do $migration$
 declare
   p record;
@@ -86,15 +146,14 @@ begin
   loop
     execute format('drop policy %I on %I.%I', p.policyname, p.schemaname, p.tablename);
     execute format(
-      'create policy %I on %I.%I for select to authenticated using (coalesce(((select auth.jwt()) ->> ''is_anonymous'')::boolean, false) = false)',
+      'create policy %I on %I.%I for select to authenticated using ((select private.has_workspace_access()))',
       p.policyname, p.schemaname, p.tablename
     );
   end loop;
 end
 $migration$;
 
--- The visit-session write policies were also created for PUBLIC. Restrict them
--- to registered accounts and preserve the existing role-based write checks.
+-- Visit-session write policies were accidentally created for PUBLIC.
 do $migration$
 declare
   p record;
@@ -110,17 +169,17 @@ begin
     execute format('drop policy %I on %I.%I', p.policyname, p.schemaname, p.tablename);
     if p.cmd = 'INSERT' then
       execute format(
-        'create policy %I on %I.%I for insert to authenticated with check ((%s) and coalesce(((select auth.jwt()) ->> ''is_anonymous'')::boolean, false) = false)',
+        'create policy %I on %I.%I for insert to authenticated with check ((%s) and (select private.has_write_access()))',
         p.policyname, p.schemaname, p.tablename, p.with_check
       );
     elsif p.cmd = 'UPDATE' then
       execute format(
-        'create policy %I on %I.%I for update to authenticated using ((%s) and coalesce(((select auth.jwt()) ->> ''is_anonymous'')::boolean, false) = false) with check ((%s) and coalesce(((select auth.jwt()) ->> ''is_anonymous'')::boolean, false) = false)',
+        'create policy %I on %I.%I for update to authenticated using ((%s) and (select private.has_write_access())) with check ((%s) and (select private.has_write_access()))',
         p.policyname, p.schemaname, p.tablename, p.qual, p.with_check
       );
     elsif p.cmd = 'DELETE' then
       execute format(
-        'create policy %I on %I.%I for delete to authenticated using ((%s) and coalesce(((select auth.jwt()) ->> ''is_anonymous'')::boolean, false) = false)',
+        'create policy %I on %I.%I for delete to authenticated using ((%s) and (select private.has_write_access()))',
         p.policyname, p.schemaname, p.tablename, p.qual
       );
     end if;
@@ -128,29 +187,34 @@ begin
 end
 $migration$;
 
--- Settings are per-account and should only be accessible to real signed-in accounts.
 drop policy if exists "Users manage own business settings" on public.business_settings;
 create policy "Users manage own business settings"
   on public.business_settings
   for all to authenticated
-  using (
-    (select auth.uid()) = user_id
-    and coalesce(((select auth.jwt()) ->> 'is_anonymous')::boolean, false) = false
-  )
-  with check (
-    (select auth.uid()) = user_id
-    and coalesce(((select auth.jwt()) ->> 'is_anonymous')::boolean, false) = false
-  );
+  using ((select auth.uid()) = user_id and (select private.has_workspace_access()))
+  with check ((select auth.uid()) = user_id and (select private.has_workspace_access()));
 
--- SECURITY DEFINER RPCs remain necessary for atomic multi-table writes, but must
--- reject guest sessions in the function body as well as through RLS.
+-- Admins may see team profiles and change only their role/active membership status.
+grant select on public.profiles to authenticated;
+grant update (role, is_active) on public.profiles to authenticated;
+drop policy if exists "profile admin read" on public.profiles;
+create policy "profile admin read"
+  on public.profiles for select to authenticated
+  using ((select private.has_admin_access()));
+drop policy if exists "profile admin update" on public.profiles;
+create policy "profile admin update"
+  on public.profiles for update to authenticated
+  using ((select private.has_admin_access()))
+  with check ((select private.has_admin_access()));
+
+-- Sensitive SECURITY DEFINER RPCs remain atomic but reject anonymous/inactive users.
 do $migration$
 declare
   f record;
   updated_definition text;
 begin
   for f in
-    select p.oid, p.proname, pg_get_functiondef(p.oid) as definition
+    select p.proname, pg_get_functiondef(p.oid) as definition
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
