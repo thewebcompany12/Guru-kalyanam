@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { School, LayoutDashboard, ClipboardList, IndianRupee, BarChart3, ListTodo, Bell, Users, Package, Truck, PackageCheck, WalletCards, Settings, MapPin, FileText, TrendingUp, AlertTriangle, CalendarClock, Boxes, CheckSquare, MessageCircle, X, ChevronRight } from 'lucide-react';
+import { School, LayoutDashboard, ClipboardList, IndianRupee, BarChart3, ListTodo, Bell, Users, Package, Truck, PackageCheck, WalletCards, Settings, MapPin, FileText, TrendingUp, AlertTriangle, CalendarClock, Boxes, CheckSquare, MessageCircle, X, ChevronRight, Plus, ArrowUpRight } from 'lucide-react';
 import { useState } from 'react';
 import GlobalSearch from '@/components/GlobalSearch';
 
@@ -33,6 +33,7 @@ export default function AppNav(){
   <aside className="app-desktop-nav">
    <Link href="/" className="brand-mark"><span className="brand-logo"><School size={21}/></span><span><b>Guru Kalyanam</b><small>School Supply Workspace</small></span></Link>
    <div className="nav-search"><GlobalSearch/></div>
+   <div className="sidebar-quick-actions"><Link href="/orders" className="sidebar-primary-action"><Plus size={17}/><span>New order</span><ArrowUpRight size={15}/></Link><Link href="/payments" className="sidebar-secondary-action"><IndianRupee size={16}/><span>Record payment</span></Link></div>
    <div className="nav-section-heading"><span className="nav-label">YOUR WORKSPACE</span><span className="nav-count">{items.length}</span></div>
    <nav className="nav-list">{groups.map(([group,hrefs])=><section key={group} className="nav-group"><div className="nav-group-label">{group}</div>{items.filter(([href])=>hrefs.includes(href)).map(([href,label,Icon])=>{const active=activeFor(href);return <Link key={href} href={href} aria-current={active?'page':undefined} className={['nav-item',active?'nav-item-active':''].join(' ')}><span className="nav-item-icon"><Icon size={18}/></span><span className="nav-item-label">{label}</span>{active&&<ChevronRight className="nav-chevron" size={15}/>}</Link>})}</section>)}</nav>
    <div className="workspace-badge"><span className="workspace-dot"/><span><b>Workspace ready</b><small>All your operations, together</small></span></div>
