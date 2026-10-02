@@ -592,3 +592,19 @@ main.app-main > *:nth-child(4) { animation-delay: .105s; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+
+/* Apply page entrance polish to every route using the shared mobile shell. */
+@media (max-width: 1023px) {
+  .app-mobile-nav + main { min-height: 100dvh; }
+  .app-mobile-nav + main > header,
+  .app-mobile-nav + main > section,
+  .app-mobile-nav + main > article,
+  .app-mobile-nav + main > div { animation: gk-rise-in .26s ease both; }
+  .app-mobile-nav + main > *:nth-child(2) { animation-delay: .025s; }
+  .app-mobile-nav + main > *:nth-child(3) { animation-delay: .05s; }
+  .app-mobile-nav + main > *:nth-child(4) { animation-delay: .075s; }
+  .app-mobile-nav + main .overflow-x-auto { max-width: 100%; -webkit-overflow-scrolling: touch; }
+  .app-mobile-nav + main .flex-wrap > * { min-width: 0; }
+  .app-mobile-nav + main button, .app-mobile-nav + main a { max-width: 100%; }
+}
