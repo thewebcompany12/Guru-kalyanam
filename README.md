@@ -208,7 +208,7 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 
 ## Phase 53 — Authentication and access-control hardening
 - Replaced automatic anonymous workspace entry with registered-account sign-in and password recovery.
-- Added account sign-out in Settings.
-- Hardened public-schema row-level security policies to reject anonymous sessions from shared business data.
-- Hardened write-access checks and sensitive purchase/payment RPCs against anonymous sessions.
-- Added a database migration for the production RLS and RPC changes.
+- New registrations start inactive and remain blocked from business records until an owner/admin approves them.
+- Added owner/admin team management for account activation and role assignment, plus account sign-out in Settings.
+- Hardened public-schema RLS policies and purchase/receiving/payment RPCs against anonymous or inactive sessions.
+- Added a database migration for membership state, role-aware access, and production RLS/RPC changes.
