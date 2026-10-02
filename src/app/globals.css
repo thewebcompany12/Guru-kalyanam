@@ -404,3 +404,13 @@ button:disabled{cursor:not-allowed}
 input,select,textarea{border-radius:13px!important}
 @media(max-width:1023px){.app-mobile-nav{background:rgba(255,255,255,.96)!important}.mobile-menu-panel{border-color:#dfe8f3!important}.mobile-bottom-nav{backdrop-filter:blur(20px)}}
 @media(prefers-reduced-motion:reduce){.search-select-menu{animation:none}}
+
+.sidebar-quick-actions{display:grid;grid-template-columns:1fr;gap:8px;padding:10px 0 14px;margin-bottom:6px;border-bottom:1px solid #edf1f7}
+.sidebar-primary-action,.sidebar-secondary-action{display:flex;align-items:center;gap:9px;min-height:42px;padding:10px 12px;border-radius:13px;font-size:12px;font-weight:750;text-decoration:none;transition:transform .16s ease,box-shadow .16s ease,background .16s ease}
+.sidebar-primary-action{background:linear-gradient(110deg,#087fca,#07896e);color:#fff;box-shadow:0 7px 15px rgba(8,137,110,.16)}
+.sidebar-primary-action span,.sidebar-secondary-action span{flex:1}
+.sidebar-primary-action:hover{transform:translateY(-1px);box-shadow:0 10px 20px rgba(8,137,110,.23)}
+.sidebar-secondary-action{background:#f2f8fc;border:1px solid #e3edf6;color:#31516d}
+.sidebar-secondary-action:hover{background:#eaf7f2;color:#087f68}
+.nav-section-heading{margin-top:2px}
+@media(max-width:1023px){.sidebar-quick-actions{display:none}}
