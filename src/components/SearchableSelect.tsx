@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Check, ChevronDown, Search, X } from 'lucide-react';
+import { Check, ChevronDown, Search } from 'lucide-react';
 
 export type SearchableOption = { value: string; label: string; description?: string };
 
@@ -40,11 +40,7 @@ export default function SearchableSelect({
         <span className={selected ? 'searchable-select-value' : 'searchable-select-placeholder'}>
           {selected?.label || placeholder}
         </span>
-        <span className="searchable-select-actions">
-          {clearable && value && !disabled && <span role="button" tabIndex={0} aria-label="Clear selection"
-            className="searchable-select-clear" onClick={event => { event.stopPropagation(); onChange(''); setOpen(false); }}
-            onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.stopPropagation(); onChange(''); setOpen(false); } }}><X size={14}/></span>}
-          <ChevronDown size={17} className={open ? 'rotate-180 transition-transform' : 'transition-transform'}/>
+        <span className="searchable-select-actions">          <ChevronDown size={17} className={open ? 'rotate-180 transition-transform' : 'transition-transform'}/>
         </span>
       </button>
       {open && !disabled && <>
