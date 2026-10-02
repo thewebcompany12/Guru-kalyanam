@@ -71,6 +71,63 @@ begin
 end
 $migration$;
 
+-- A few communication tables used unconditional SELECT policies; guest sessions
+-- must not read recipient numbers, message content, or reusable business templates.
+do $migration$
+declare
+  p record;
+begin
+  for p in
+    select schemaname, tablename, policyname
+    from pg_policies
+    where schemaname = 'public'
+      and cmd = 'SELECT'
+      and qual in ('true', '(true)')
+  loop
+    execute format('drop policy %I on %I.%I', p.policyname, p.schemaname, p.tablename);
+    execute format(
+      'create policy %I on %I.%I for select to authenticated using (coalesce(((select auth.jwt()) ->> ''is_anonymous'')::boolean, false) = false)',
+      p.policyname, p.schemaname, p.tablename
+    );
+  end loop;
+end
+$migration$;
+
+-- The visit-session write policies were also created for PUBLIC. Restrict them
+-- to registered accounts and preserve the existing role-based write checks.
+do $migration$
+declare
+  p record;
+begin
+  for p in
+    select schemaname, tablename, policyname, cmd, qual, with_check
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'visit_sessions'
+      and roles::text = '{public}'
+      and cmd in ('INSERT', 'UPDATE', 'DELETE')
+  loop
+    execute format('drop policy %I on %I.%I', p.policyname, p.schemaname, p.tablename);
+    if p.cmd = 'INSERT' then
+      execute format(
+        'create policy %I on %I.%I for insert to authenticated with check ((%s) and coalesce(((select auth.jwt()) ->> ''is_anonymous'')::boolean, false) = false)',
+        p.policyname, p.schemaname, p.tablename, p.with_check
+      );
+    elsif p.cmd = 'UPDATE' then
+      execute format(
+        'create policy %I on %I.%I for update to authenticated using ((%s) and coalesce(((select auth.jwt()) ->> ''is_anonymous'')::boolean, false) = false) with check ((%s) and coalesce(((select auth.jwt()) ->> ''is_anonymous'')::boolean, false) = false)',
+        p.policyname, p.schemaname, p.tablename, p.qual, p.with_check
+      );
+    elsif p.cmd = 'DELETE' then
+      execute format(
+        'create policy %I on %I.%I for delete to authenticated using ((%s) and coalesce(((select auth.jwt()) ->> ''is_anonymous'')::boolean, false) = false)',
+        p.policyname, p.schemaname, p.tablename, p.qual
+      );
+    end if;
+  end loop;
+end
+$migration$;
+
 -- Settings are per-account and should only be accessible to real signed-in accounts.
 drop policy if exists "Users manage own business settings" on public.business_settings;
 create policy "Users manage own business settings"
