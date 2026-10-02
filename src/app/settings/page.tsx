@@ -3,7 +3,9 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Building2, CheckCircle2, FileText, LogOut, RefreshCw, Save, ShieldCheck, Users } from 'lucide-react';
 import AppNav from '@/components/AppNav';
 import { createClient } from '@/lib/supabase';
-type Settings={business_name:string;gstin:string;address:string;state:string;state_code:string;phone:string;email:string;invoice_prefix:string};\ntype UserRole='OWNER'|'ADMIN'|'SALES_PERSON'|'DELIVERY_PERSON'|'VIEWER';\ntype Member={id:string;full_name:string|null;email:string|null;phone:string|null;role:UserRole;is_active:boolean;created_at:string};
+type Settings={business_name:string;gstin:string;address:string;state:string;state_code:string;phone:string;email:string;invoice_prefix:string};
+type UserRole='OWNER'|'ADMIN'|'SALES_PERSON'|'DELIVERY_PERSON'|'VIEWER';
+type Member={id:string;full_name:string|null;email:string|null;phone:string|null;role:UserRole;is_active:boolean;created_at:string};
 const defaults:Settings={business_name:'Guru Kalyanam',gstin:'',address:'',state:'Uttar Pradesh',state_code:'09',phone:'',email:'',invoice_prefix:'INV'};
 const fields:{key:keyof Settings;label:string;hint?:string;required?:boolean}[]=[{key:'business_name',label:'Business / seller name',required:true},{key:'gstin',label:'GSTIN',hint:'15-character GST identification number'},{key:'address',label:'Registered business address'},{key:'state',label:'State',required:true},{key:'state_code',label:'GST state code',required:true},{key:'phone',label:'Business phone'},{key:'email',label:'Business email'},{key:'invoice_prefix',label:'Invoice prefix',hint:'For example, INV'}];
 export default function SettingsPage(){
