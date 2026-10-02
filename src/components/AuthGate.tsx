@@ -35,13 +35,13 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     void loadSession();
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!active) return;
-      if (event === 'PASSWORD_RECOVERY') {
+      if (event === 'PASSWORD_RECOVERY' || (recoveryInUrl && event !== 'USER_UPDATED' && event !== 'SIGNED_OUT')) {
         setRecoveryMode(true);
         setResetMode(false);
         setSession(null);
       } else {
         setSession(isRealSession(nextSession) ? nextSession : null);
-        if (isRealSession(nextSession)) setRecoveryMode(false);
+        if (event === 'USER_UPDATED' || (!recoveryInUrl && isRealSession(nextSession))) setRecoveryMode(false);
       }
       setChecking(false);
     });
