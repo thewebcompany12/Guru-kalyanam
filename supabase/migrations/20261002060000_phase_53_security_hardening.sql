@@ -35,7 +35,7 @@ begin
     where schemaname = 'public'
       and cmd = 'SELECT'
       and qual is not null
-      and qual ~* 'auth\.uid.*is not null'
+      and qual ~* 'auth[.]uid.*is not null'
       and qual !~* 'is_anonymous'
   loop
     execute format('drop policy %I on %I.%I', p.policyname, p.schemaname, p.tablename);
@@ -103,7 +103,7 @@ begin
     if position('is_anonymous' in f.definition) = 0 then
       updated_definition := regexp_replace(
         f.definition,
-        $pattern$if auth\.uid\(\) is null[[:space:]]+or not private\.has_write_access\(\) then raise exception 'Write access required'; end if;$pattern$,
+        $pattern$if auth[.]uid[(][)] is null[[:space:]]+or not private[.]has_write_access[(][)] then raise exception 'Write access required'; end if;$pattern$,
         $replacement$if auth.uid() is null or coalesce((select auth.jwt() ->> 'is_anonymous')::boolean, false) or not private.has_write_access() then raise exception 'Write access required'; end if;$replacement$,
         'gi'
       );
