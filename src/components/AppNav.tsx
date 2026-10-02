@@ -21,7 +21,7 @@ const groups:[string,string[]][]=[
  ['OVERVIEW',['/','/work-queue']],['FIELD OPERATIONS',['/schools','/contacts','/visits','/follow-ups','/map']],
  ['SALES & ORDERS',['/orders','/order-fulfilment','/pipeline','/templates']],['CATALOG & SUPPLIERS',['/products','/inventory','/stock-movements','/suppliers','/purchases','/purchase-receiving']],
  ['MONEY & FULFILMENT',['/receivables','/statements','/supplier-payments','/supplier-payment-vouchers','/supplier-statements','/supplier-performance','/expenses','/deliveries','/payments','/invoices']],
- ['COMMUNICATION & TASKS',['/contacts','/whatsapp','/reminders','/tasks','/notifications']],['INSIGHTS & SETTINGS',['/reports','/insights','/timeline','/settings']]
+ ['COMMUNICATION & TASKS',['/whatsapp','/reminders','/tasks','/notifications']],['INSIGHTS & SETTINGS',['/reports','/insights','/timeline','/settings']]
 ];
 const mobileItems=[['/','Home',LayoutDashboard],['/schools','Schools',School],['/orders','Orders',ClipboardList],['/payments','Money',IndianRupee],['/reports','Reports',BarChart3],['/work-queue','More',ListTodo]] as const;
 
