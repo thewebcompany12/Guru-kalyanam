@@ -433,3 +433,13 @@ table thead{background:#f6f7fc}
 @media(max-width:1023px){.app-mobile-nav{height:auto;min-height:58px;padding-bottom:9px;flex-wrap:wrap;overflow:visible}.app-mobile-nav>.mobile-topline{width:100%;display:flex;align-items:center;justify-content:space-between}.app-mobile-nav>.mobile-search{width:100%;padding:0 2px}.app-mobile-nav + main{padding-top:126px!important}.app-mobile-nav .mobile-search .global-search-trigger{width:100%}.app-desktop-nav{display:none!important}}
 @media(max-width:640px){.dashboard-hero{border-radius:22px}.card{border-radius:17px}.metric-card{border-radius:16px;padding:14px}.searchable-select-popover{position:fixed;left:12px;right:12px;top:50%;transform:translateY(-50%);max-height:70dvh}.searchable-select-options{max-height:48dvh}.app-mobile-nav + main{padding-top:126px!important}.mobile-bottom-nav{padding-bottom:max(6px,env(safe-area-inset-bottom))}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+
+/* Fast actions in the desktop workspace rail */
+.sidebar-quick-actions{display:grid;gap:8px;padding:0 0 15px;margin:0 0 8px;border-bottom:1px solid #edf0f6}
+.sidebar-primary-action,.sidebar-secondary-action{display:flex;align-items:center;gap:9px;min-height:42px;padding:10px 12px;border-radius:13px;font-size:12px;font-weight:750;text-decoration:none;transition:transform .16s ease,box-shadow .16s ease,background .16s ease}
+.sidebar-primary-action{background:linear-gradient(110deg,#6558e8,#16b8a6);color:#fff;box-shadow:0 7px 15px rgba(101,88,232,.18)}
+.sidebar-primary-action span,.sidebar-secondary-action span{flex:1}
+.sidebar-primary-action:hover{transform:translateY(-1px);box-shadow:0 10px 20px rgba(101,88,232,.25)}
+.sidebar-secondary-action{background:#f8f8ff;border:1px solid #e7e5fb;color:#5145bf}
+.sidebar-secondary-action:hover{background:#f0efff;color:#4235ae}
+@media(max-width:1023px){.sidebar-quick-actions{display:none}}
