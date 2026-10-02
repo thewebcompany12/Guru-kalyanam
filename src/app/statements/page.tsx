@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AppNav from '@/components/AppNav';
 import SearchableSelect from '@/components/SearchableSelect';
 import { createClient } from '@/lib/supabase';
-import { Download, Printer, RefreshCw, Search, FileText } from 'lucide-react';
+import { Download, Printer, RefreshCw, FileText } from 'lucide-react';
 
 type School = { id: string; name: string };
 type Order = { id: string; order_number: number; school_id: string; order_date: string; status: string; total: number | string };
@@ -98,7 +98,7 @@ export default function SchoolStatementsPage() {
     </header>
     {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">Could not load account statement data: {error}</div>}
     <section className="card grid gap-3 p-4 md:grid-cols-[minmax(220px,1fr)_180px_180px] md:p-5">
-      <label className="text-sm font-medium text-slate-700">Find school<div className="mt-1"><SearchableSelect value={schoolId} onChange={setSchoolId} options={visibleSchools.map(school=>({value:school.id,label:school.name,description:school.district||undefined}))} placeholder="Search and choose a school…" searchPlaceholder="Search school names…" /></div></label>
+      <label className="text-sm font-medium text-slate-700">Find school<div className="mt-1"><SearchableSelect value={schoolId} onChange={setSchoolId} options={visibleSchools.map(school=>({value:school.id,label:school.name}))} placeholder="Search and choose a school…" searchPlaceholder="Search school names…" /></div></label>
       <label className="text-sm font-medium text-slate-700">From date<input type="date" value={from} max={to || undefined} onChange={(event) => setFrom(event.target.value)} className="mt-1 w-full rounded-xl border bg-white px-3 py-2.5"/></label>
       <label className="text-sm font-medium text-slate-700">To date<input type="date" value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} className="mt-1 w-full rounded-xl border bg-white px-3 py-2.5"/></label>
     </section>
