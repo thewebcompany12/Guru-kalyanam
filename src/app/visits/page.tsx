@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { CalendarDays, CheckCircle2, Clock3, LocateFixed, MapPin, Navigation, Play, Plus, Route, Search, Square, X } from 'lucide-react';
 import AppNav from '@/components/AppNav';
+import SearchableSelect from '@/components/SearchableSelect';
 import { createClient } from '@/lib/supabase';
 
 const emptyForm = {
@@ -169,7 +170,7 @@ export default function VisitsPage(){
       {!activeSession ? <button disabled={saving} onClick={start} className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-sky-500 text-white px-5 py-3 font-semibold flex items-center justify-center gap-2 shadow-lg shadow-emerald-100"><Play size={17}/>{saving?'Starting…':'Start morning visit route & capture GPS'}</button> : <>
         <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-3 mb-4 text-sm text-emerald-800 flex items-start gap-2"><Route size={17} className="mt-0.5 shrink-0"/><span>Started at <b>{formatTime(activeSession.started_at)}</b>. {active?'Currently at '+(active.schools?.name||'the selected school')+'. Add the next school when you leave.':'Choose the school you have reached and add it below.'}</span></div>
         <div className="grid md:grid-cols-2 gap-3">
-          <select value={schoolId} onChange={e=>setSchoolId(e.target.value)} className="rounded-xl border px-3 py-3"><option value="">Select school reached</option>{schools.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select>
+          <SearchableSelect value={schoolId} onChange={setSchoolId} options={schools.map(s=>({value:s.id,label:s.name}))} placeholder="Search school reached…" searchPlaceholder="Type a school name…" />
           <select value={form.purpose} onChange={e=>setForm({...form,purpose:e.target.value})} className="rounded-xl border px-3 py-3"><option value="GENERAL">General visit</option><option value="SALES">Sales / order</option><option value="DELIVERY">Delivery</option><option value="PAYMENT_COLLECTION">Payment collection</option><option value="FOLLOW_UP">Follow-up</option></select>
           <input value={form.person_met} onChange={e=>setForm({...form,person_met:e.target.value})} placeholder="Person met (e.g. Principal)" className="rounded-xl border px-3 py-3"/>
           <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Notes: what happened, what was discussed…" className="rounded-xl border px-3 py-3 md:row-span-2"/>
@@ -185,7 +186,7 @@ export default function VisitsPage(){
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
         <div><h2 className="font-bold">Visit history</h2><p className="text-xs text-slate-500 mt-1">{filtered.length} school visit{filtered.length===1?'':'s'} shown · each route can contain multiple schools</p></div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <select value={filterSchool} onChange={e=>setFilterSchool(e.target.value)} className="rounded-xl border px-3 py-2.5 text-sm"><option value="">All schools</option>{schools.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select>
+          <SearchableSelect value={filterSchool} onChange={setFilterSchool} options={[{value:'',label:'All schools'},...schools.map(s=>({value:s.id,label:s.name}))]} placeholder="All schools" searchPlaceholder="Search schools…" />
           <label className="relative"><Search size={15} className="absolute left-3 top-3 text-slate-400"/><input type="date" value={filterDate} onChange={e=>setFilterDate(e.target.value)} className="rounded-xl border pl-9 pr-3 py-2.5 text-sm"/></label>
           {(filterSchool||filterDate)&&<button onClick={()=>{setFilterSchool('');setFilterDate('')}} className="rounded-xl border px-3 py-2.5 text-sm flex items-center justify-center gap-1"><X size={15}/>Clear</button>}
         </div>
