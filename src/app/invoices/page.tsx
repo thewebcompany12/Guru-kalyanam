@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import AppNav from '@/components/AppNav';
+import SearchableSelect from '@/components/SearchableSelect';
 import { createClient } from '@/lib/supabase';
 import { FileText, Printer, RefreshCw } from 'lucide-react';
 
@@ -40,7 +41,7 @@ export default function InvoicesPage(){
   <header className="mb-6"><p className="text-sm text-slate-500">Phase 28 · Billing</p><h1 className="text-3xl font-bold">GST Invoices</h1><p className="text-slate-500 mt-1">Create GST-ready invoices from orders with automatic CGST/SGST or IGST calculation and print-ready layouts.</p></header>
   <div className="grid lg:grid-cols-[430px_1fr] gap-5">
    <section className="card p-5 space-y-3"><h2 className="font-bold flex gap-2 items-center"><FileText size={18}/>Create invoice</h2>
-    <select className="w-full border rounded-xl px-3 py-3" value={orderId} onChange={e=>setOrderId(e.target.value)}><option value="">Select an uninvoiced order…</option>{orderOptions.map(o=><option key={o.id} value={o.id}>Order #{o.order_number} · {o.school?.name||'School'} · {money(o.total)}</option>)}</select>
+    <SearchableSelect value={orderId} onChange={setOrderId} options={orderOptions.map(o=>({value:o.id,label:`Order #${o.order_number} · ${o.school?.name||'School'}`,description:money(o.total)}))} placeholder="Search school or order…" searchPlaceholder="Type school name or order number…" />
     <input className="w-full border rounded-xl px-3 py-3" value={seller} onChange={e=>setSeller(e.target.value)} placeholder="Seller / business name"/>
     <input className="w-full border rounded-xl px-3 py-3" value={gstin} onChange={e=>setGstin(e.target.value.toUpperCase())} placeholder="Seller GSTIN (optional)"/>
     <textarea className="w-full border rounded-xl px-3 py-3" value={sellerAddress} onChange={e=>setSellerAddress(e.target.value)} placeholder="Seller address"/>
