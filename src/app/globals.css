@@ -443,3 +443,81 @@ table thead{background:#f6f7fc}
 .sidebar-secondary-action{background:#f8f8ff;border:1px solid #e7e5fb;color:#5145bf}
 .sidebar-secondary-action:hover{background:#f0efff;color:#4235ae}
 @media(max-width:1023px){.sidebar-quick-actions{display:none}}
+
+
+/* Mobile reliability pass: reserve real space for the fixed header and dock. */
+@media (max-width: 1023px) {
+  html, body { width: 100%; max-width: 100%; overflow-x: clip; }
+  .app-mobile-nav {
+    position: fixed !important;
+    inset: 0 0 auto 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: calc(8px + env(safe-area-inset-top)) 14px 12px !important;
+    overflow: visible !important;
+    z-index: 800 !important;
+  }
+  .app-mobile-nav .mobile-topline {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-height: 42px !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+  }
+  .app-mobile-nav .mobile-search {
+    display: block !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+  }
+  .app-mobile-nav .mobile-search > * { width: 100% !important; min-width: 0 !important; }
+  .app-mobile-nav .mobile-search input,
+  .app-mobile-nav .mobile-search button { max-width: 100% !important; }
+  .app-mobile-nav + main,
+  main.app-main {
+    min-width: 0 !important;
+    width: 100% !important;
+    padding-top: calc(142px + env(safe-area-inset-top)) !important;
+    padding-bottom: calc(112px + env(safe-area-inset-bottom)) !important;
+    overflow-wrap: anywhere;
+  }
+  .mobile-bottom-nav {
+    position: fixed !important;
+    z-index: 700 !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: calc(8px + env(safe-area-inset-bottom)) !important;
+    width: auto !important;
+    max-width: 720px !important;
+    margin-inline: auto !important;
+    min-height: 64px !important;
+    height: auto !important;
+    padding: 6px 4px !important;
+    display: grid !important;
+    grid-template-columns: repeat(6,minmax(0,1fr)) !important;
+  }
+  .mobile-dock-item { min-width: 0 !important; overflow: hidden; }
+  .mobile-dock-item > span:last-child { white-space: nowrap; }
+  .mobile-menu-panel { z-index: 1000 !important; }
+  .mobile-menu-backdrop { z-index: 990 !important; }
+}
+@media (max-width: 480px) {
+  .app-mobile-nav { padding-left: 12px !important; padding-right: 12px !important; }
+  .app-mobile-nav .mobile-brand { min-width: 0; }
+  .app-mobile-nav .mobile-brand span:last-child { min-width: 0; }
+  .app-mobile-nav .mobile-brand b, .app-mobile-nav .mobile-brand small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .app-main { padding-left: 12px !important; padding-right: 12px !important; }
+  .mobile-bottom-nav { left: 7px !important; right: 7px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
