@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import AppNav from '@/components/AppNav';
+import SearchableSelect from '@/components/SearchableSelect';
 import { createClient } from '@/lib/supabase';
 import { Download, Printer, RefreshCw, Search, FileText } from 'lucide-react';
 
@@ -97,7 +98,7 @@ export default function SchoolStatementsPage() {
     </header>
     {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">Could not load account statement data: {error}</div>}
     <section className="card grid gap-3 p-4 md:grid-cols-[minmax(220px,1fr)_180px_180px] md:p-5">
-      <label className="text-sm font-medium text-slate-700">Find school<select value={schoolId} onChange={(event) => setSchoolId(event.target.value)} className="mt-1 w-full rounded-xl border bg-white px-3 py-2.5"><option value="">Select a school…</option>{visibleSchools.map((school) => <option key={school.id} value={school.id}>{school.name}</option>)}</select><span className="relative mt-2 block"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search school names" className="w-full rounded-xl border bg-white py-2 pl-9 pr-3 text-sm"/></span></label>
+      <label className="text-sm font-medium text-slate-700">Find school<div className="mt-1"><SearchableSelect value={schoolId} onChange={setSchoolId} options={visibleSchools.map(school=>({value:school.id,label:school.name}))} placeholder="Search and select a school…" searchPlaceholder="Type school name…" /></div><span className="relative mt-2 block"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search school names" className="w-full rounded-xl border bg-white py-2 pl-9 pr-3 text-sm"/></span></label>
       <label className="text-sm font-medium text-slate-700">From date<input type="date" value={from} max={to || undefined} onChange={(event) => setFrom(event.target.value)} className="mt-1 w-full rounded-xl border bg-white px-3 py-2.5"/></label>
       <label className="text-sm font-medium text-slate-700">To date<input type="date" value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} className="mt-1 w-full rounded-xl border bg-white px-3 py-2.5"/></label>
     </section>
