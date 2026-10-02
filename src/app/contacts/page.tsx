@@ -34,7 +34,8 @@ export default function ContactsPage(){
  const save=async()=>{
   if(!form.school_id||!form.name.trim()){setError('Choose a school and enter the contact name.');return}
   setSaving(true);setError('');
-  const result=await supabase.from('school_contacts').insert({school_id:form.school_id,name:form.name.trim(),phone:form.phone.trim()||null,whatsapp_number:form.whatsapp_number.trim()||form.phone.trim()||null,email:form.email.trim()||null});
+  const {data:{user}}=await supabase.auth.getUser();
+  const result=await supabase.from('school_contacts').insert({school_id:form.school_id,name:form.name.trim(),designation:form.designation.trim()||null,phone:form.phone.trim()||null,whatsapp_number:form.whatsapp_number.trim()||form.phone.trim()||null,is_primary:form.is_primary,created_by:user?.id});
   if(result.error)setError(result.error.message);
   else{setForm({school_id:'',name:'',designation:'',phone:'',whatsapp_number:'',is_primary:false});setShowForm(false);await load()}
   setSaving(false);
