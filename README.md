@@ -204,3 +204,11 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Added monthly purchasing spend, supplier spend comparison, average order value, and highest-cost product analysis.
 - Added search, purchase date filters, refresh, and CSV export.
 - Uses existing purchases and purchase_items data; no database migration required.
+
+
+## Phase 53 — Authentication and access-control hardening
+- Replaced automatic anonymous workspace entry with registered-account sign-in and password recovery.
+- Added account sign-out in Settings.
+- Hardened public-schema row-level security policies to reject anonymous sessions from shared business data.
+- Hardened write-access checks and sensitive purchase/payment RPCs against anonymous sessions.
+- Added a database migration for the production RLS and RPC changes.
