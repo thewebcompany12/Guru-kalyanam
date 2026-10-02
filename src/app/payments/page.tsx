@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import AppNav from '@/components/AppNav';
+import SearchableSelect from '@/components/SearchableSelect';
 import { createClient } from '@/lib/supabase';
 
 type School={id:string;name:string};
@@ -79,7 +80,7 @@ export default function PaymentsPage(){
    </div>
    <div className="grid xl:grid-cols-[400px_1fr] gap-5">
      <section className="card p-5 space-y-3"><h2 className="font-bold">Record collection</h2>
-       <select className="w-full border rounded-xl px-3 py-2" value={school} onChange={e=>{setSchool(e.target.value);setOrder('')}}><option value="">Select school…</option>{schools.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select>
+       <SearchableSelect className="w-full" value={school} onChange={value=>{setSchool(value);setOrder('')}} options={schools.map(s=>({value:s.id,label:s.name}))} placeholder="Search and select a school…" searchPlaceholder="Type school name…" />
        <select className="w-full border rounded-xl px-3 py-2" value={order} onChange={e=>setOrder(e.target.value)} disabled={!school}><option value="">School payment · no order</option>{schoolOrders.map(o=><option key={o.id} value={o.id}>Order #{o.order_number} · {money(Number(o.total))}</option>)}</select>
        {selectedOrder&&<div className="rounded-xl bg-slate-100 p-3 text-sm">Order total <b>{money(Number(selectedOrder.total))}</b> · already paid <b>{money(orderPaid)}</b> · remaining <b>{money(remaining)}</b></div>}
        <input className="w-full border rounded-xl px-3 py-2" type="number" min="0.01" step="0.01" max={selectedOrder?remaining:undefined} value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Amount"/>
@@ -90,7 +91,7 @@ export default function PaymentsPage(){
        <button disabled={saving} className="w-full bg-emerald-600 disabled:opacity-50 text-white rounded-xl py-3 font-semibold" onClick={save}>{saving?'Saving…':'Record payment'}</button>
      </section>
      <section className="card p-4">
-       <div className="flex flex-col md:flex-row gap-2 mb-4"><input className="flex-1 border rounded-xl px-3 py-2" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search school, reference or note…"/><select className="border rounded-xl px-3 py-2" value={school} onChange={e=>setSchool(e.target.value)}><option value="">All schools</option>{schools.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select><select className="border rounded-xl px-3 py-2" value={modeFilter} onChange={e=>setModeFilter(e.target.value)}><option value="">All modes</option>{modes.map(x=><option key={x}>{x}</option>)}</select><button className="border rounded-xl px-3 py-2" onClick={load}>Refresh</button></div>
+       <div className="flex flex-col md:flex-row gap-2 mb-4"><input className="flex-1 border rounded-xl px-3 py-2" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search school, reference or note…"/><SearchableSelect className="min-w-[200px]" value={school} onChange={setSchool} options={schools.map(s=>({value:s.id,label:s.name}))} placeholder="All schools" searchPlaceholder="Search schools…" /><select className="border rounded-xl px-3 py-2" value={modeFilter} onChange={e=>setModeFilter(e.target.value)}><option value="">All modes</option>{modes.map(x=><option key={x}>{x}</option>)}</select><button className="border rounded-xl px-3 py-2" onClick={load}>Refresh</button></div>
        {loading?<p className="py-12 text-center text-slate-500">Loading payments…</p>:visible.length===0?<p className="py-12 text-center text-slate-500">No payments match these filters.</p>:<div className="space-y-2">{visible.map(r=><div key={r.id} className="border rounded-xl p-4"><div className="flex justify-between gap-3"><div><b>{schoolNames.get(r.school_id)||'School'}</b><p className="text-sm text-slate-500">{r.payment_date} · {r.payment_mode}</p></div><b className="text-emerald-700">{money(Number(r.amount))}</b></div>{r.reference_number&&<p className="text-sm mt-2">Ref: {r.reference_number}</p>}{r.notes&&<p className="text-sm text-slate-500 mt-1">{r.notes}</p>}</div>)}</div>}
      </section>
    </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import AppNav from '@/components/AppNav';
+import SearchableSelect from '@/components/SearchableSelect';
 import { createClient } from '@/lib/supabase';
 import { Printer, Search, ReceiptText, RefreshCw, Share2 } from 'lucide-react';
 

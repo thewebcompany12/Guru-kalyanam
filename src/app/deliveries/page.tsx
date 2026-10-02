@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import AppNav from '@/components/AppNav';
+import SearchableSelect from '@/components/SearchableSelect';
 import { createClient } from '@/lib/supabase';
 import { CalendarDays, CheckCircle2, Clock3, Download, Filter, PackageCheck, RefreshCw, Search, Truck, XCircle } from 'lucide-react';
 
@@ -168,10 +169,7 @@ export default function Deliveries() {
           <section className="card p-4">
             <h2 className="font-bold mb-3">Schedule a delivery</h2>
             <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
-              <select className="border rounded-xl px-3 py-2.5 text-sm xl:col-span-2" value={orderId} onChange={(e) => setOrderId(e.target.value)}>
-                <option value="">Select order…</option>
-                {orders.map((o) => <option key={o.id} value={o.id}>#{o.order_number} · {o.school?.name || 'School'} · ₹{Number(o.total).toFixed(0)}</option>)}
-              </select>
+              <div className="xl:col-span-2"><SearchableSelect value={orderId} onChange={setOrderId} options={orders.map(o=>({value:o.id,label:`Order #${o.order_number} · ${o.school?.name || 'School'}`,description:`₹${Number(o.total).toFixed(0)}`}))} placeholder="Search order or school…" searchPlaceholder="Type order number or school name…" /></div>
               <input className="border rounded-xl px-3 py-2.5 text-sm" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
               <input className="border rounded-xl px-3 py-2.5 text-sm" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
               <select className="border rounded-xl px-3 py-2.5 text-sm" value={responsible} onChange={(e) => setResponsible(e.target.value)}>
