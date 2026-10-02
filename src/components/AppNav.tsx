@@ -40,7 +40,7 @@ export default function AppNav(){
   </aside>
   <header className="app-mobile-nav">
    <div className="mobile-topline">
-    <Link href="/" className="mobile-brand"><span className="brand-logo"><School size={20}/></span><span><b>Guru Kalyanam</b><small>School Supply Ops</small></span></Link>
+    <Link href="/" className="mobile-brand"><span className="brand-logo"><School size={20}/></span><span><b>Guru Kalyanam</b><small>School Supply Workspace</small></span></Link>
     <div className="mobile-head-actions"><Link href="/notifications" className="mobile-notification" aria-label="Notifications"><Bell size={20}/></Link><button type="button" className="mobile-menu-button" onClick={()=>setMenuOpen(v=>!v)} aria-expanded={menuOpen} aria-label={menuOpen?'Close navigation':'Open navigation'}>{menuOpen?<X size={21}/>:<span className="mobile-menu-dots">•••</span>}</button></div>
    </div>
    <div className="mobile-search"><GlobalSearch/></div>
