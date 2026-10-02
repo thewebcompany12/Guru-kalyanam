@@ -172,6 +172,17 @@ begin
 end
 $migration$;
 
+-- Policies that already excluded anonymous sessions still need to require active membership.
+drop policy if exists "Authenticated users can read business expenses" on public.business_expenses;
+create policy "Authenticated users can read business expenses"
+  on public.business_expenses for select to authenticated
+  using ((select private.has_workspace_access()));
+
+drop policy if exists "Authenticated users can read supplier payments" on public.supplier_payments;
+create policy "Authenticated users can read supplier payments"
+  on public.supplier_payments for select to authenticated
+  using ((select private.has_workspace_access()));
+
 -- Visit-session write policies were accidentally created for PUBLIC.
 do $migration$
 declare
