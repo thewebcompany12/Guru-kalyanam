@@ -521,3 +521,74 @@ table thead{background:#f6f7fc}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+
+/* Guru Kalyanam visual refresh — compact, responsive and accessible. */
+:root {
+  --gk-ink: #172033;
+  --gk-muted: #64748b;
+  --gk-line: #e2e8f0;
+  --gk-surface: #ffffff;
+  --gk-canvas: #f5f7fb;
+  --gk-primary: #6558e8;
+  --gk-primary-dark: #5145cd;
+  --gk-radius: 20px;
+}
+body { background: var(--gk-canvas); color: var(--gk-ink); }
+::selection { background: #ddd9ff; color: #28205f; }
+a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button, a { touch-action: manipulation; }
+button:not(:disabled), a { transition: transform .16s ease, box-shadow .18s ease, background-color .18s ease, border-color .18s ease; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid #a5b4fc !important; outline-offset: 2px;
+}
+.card, .empty-panel {
+  border: 1px solid #e5eaf3 !important;
+  border-radius: var(--gk-radius) !important;
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 3px 14px rgba(20,30,60,.035);
+}
+.card { transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+.card:hover { border-color: #d8d8f8 !important; box-shadow: 0 9px 26px rgba(30,41,90,.065); }
+input:not([type=checkbox]):not([type=radio]), select, textarea {
+  border-color: #dce3ee;
+  border-radius: 12px;
+  background-color: #fff;
+  color: var(--gk-ink);
+  min-height: 44px;
+}
+input::placeholder, textarea::placeholder { color: #94a3b8; }
+button:disabled { cursor: not-allowed; opacity: .55; }
+.app-desktop-nav { background: #fff !important; border-right: 1px solid #e6eaf2 !important; }
+.brand-logo { box-shadow: 0 7px 18px rgba(101,88,232,.20); }
+.nav-item { border-radius: 12px !important; margin-inline: 7px; width: calc(100% - 14px); }
+.nav-item-active { background: linear-gradient(90deg,#f0efff,#f7f6ff) !important; color: #5145cd !important; }
+.nav-item-active .nav-item-icon { color: #6558e8 !important; }
+.sidebar-primary-action { box-shadow: 0 7px 16px rgba(101,88,232,.2); }
+.mobile-menu-panel { max-height: calc(100dvh - env(safe-area-inset-top) - 18px) !important; overflow-y: auto !important; overscroll-behavior: contain; }
+.mobile-bottom-nav { background: rgba(255,255,255,.96) !important; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid #e0e6f0 !important; box-shadow: 0 10px 36px rgba(23,32,51,.13) !important; }
+.mobile-dock-active { color: #5b4ee0 !important; }
+.mobile-dock-active .mobile-dock-icon { background: #eeecff; border-radius: 12px; }
+@keyframes gk-rise-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+main.app-main > header, main.app-main > section, main.app-main > div { animation: gk-rise-in .28s ease both; }
+main.app-main > *:nth-child(2) { animation-delay: .035s; }
+main.app-main > *:nth-child(3) { animation-delay: .07s; }
+main.app-main > *:nth-child(4) { animation-delay: .105s; }
+@media (max-width: 1023px) {
+  .app-mobile-nav { background: rgba(255,255,255,.97) !important; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-bottom: 1px solid #e5eaf3 !important; box-shadow: 0 6px 24px rgba(23,32,51,.06); }
+  .app-mobile-nav .mobile-search { margin-top: 1px; }
+  main.app-main { padding-left: 14px !important; padding-right: 14px !important; }
+  main.app-main > header { gap: 12px; }
+  main.app-main h1 { letter-spacing: -.035em; line-height: 1.12; }
+  main.app-main .grid { min-width: 0; }
+  main.app-main .card { min-width: 0; }
+  main.app-main table { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+@media (max-width: 380px) {
+  main.app-main { padding-left: 10px !important; padding-right: 10px !important; }
+  .mobile-brand small { max-width: 138px; }
+  .mobile-dock-item > span:last-child { font-size: 10px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
