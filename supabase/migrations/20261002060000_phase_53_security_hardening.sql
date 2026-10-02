@@ -85,6 +85,25 @@ $function$;
 revoke execute on function private.has_admin_access() from public, anon;
 grant execute on function private.has_admin_access() to authenticated;
 
+create or replace function private.has_owner_access()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  select
+    coalesce(((select auth.jwt()) ->> 'is_anonymous')::boolean, false) = false
+    and exists (
+      select 1 from public.profiles
+      where id = (select auth.uid())
+        and is_active = true
+        and role = 'OWNER'::public.user_role
+    );
+$function$;
+revoke execute on function private.has_owner_access() from public, anon;
+grant execute on function private.has_owner_access() to authenticated;
+
 create or replace function private.has_write_access()
 returns boolean
 language sql
@@ -205,7 +224,10 @@ drop policy if exists "profile admin update" on public.profiles;
 create policy "profile admin update"
   on public.profiles for update to authenticated
   using ((select private.has_admin_access()))
-  with check ((select private.has_admin_access()));
+  with check (
+    (select private.has_admin_access())
+    and (role not in ('OWNER'::public.user_role, 'ADMIN'::public.user_role) or (select private.has_owner_access()))
+  );
 
 -- Sensitive SECURITY DEFINER RPCs remain atomic but reject anonymous/inactive users.
 do $migration$
