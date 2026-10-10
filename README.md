@@ -212,3 +212,11 @@ Purchasing now supports supplier/product purchase creation, purchase numbering, 
 - Added owner/admin team management for account activation and role assignment, plus account sign-out in Settings.
 - Hardened public-schema RLS policies and purchase/receiving/payment RPCs against anonymous or inactive sessions.
 - Added a database migration for membership state, role-aware access, and production RLS/RPC changes.
+
+
+## Phase 54 — Banner & Flag Studio
+- Added a mobile-friendly workspace to upload and locally save reusable school banner, poster and flag image templates.
+- Added a server-only Gemini analysis endpoint to suggest normalized school-name text locations; the API key is read from GEMINI_API_KEY and is never exposed to the browser.
+- Added name replacement preview, selectable detected regions, JPG export and browser print / Save PDF with common large-format sizes.
+- Saved templates remain in the current browser/device; AI-detected coordinates must be reviewed before printing, especially on patterned or gradient backgrounds.
+- Configure GEMINI_API_KEY in Vercel Environment Variables before using AI analysis.
