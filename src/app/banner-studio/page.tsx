@@ -7,13 +7,13 @@ type Template={id:string;name:string;image:string};
 const STORE='guru-kalyanam-banner-templates-v1';
 export default function BannerStudioPage(){
  const [image,setImage]=useState(''),[fileName,setFileName]=useState(''),[name,setName]=useState(''),[templateName,setTemplateName]=useState(''),[matches,setMatches]=useState<Match[]>([]),[selected,setSelected]=useState<number[]>([]),[templates,setTemplates]=useState<Template[]>([]),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState(''),[size,setSize]=useState('4x3'),[scale,setScale]=useState(2);
- useEffect(()=>{try{setTemplates(JSON.parse(localStorage.getItem(STORE)||'[]'))}catch{}},[]);
+ useEffect(()=>{loadTemplateStore().then(setTemplates).catch(()=>setError('Saved templates could not be loaded on this device.'));},[]);
  const active=matches.filter((_,i)=>selected.includes(i));
  function upload(e:ChangeEvent<HTMLInputElement>){const f=e.target.files?.[0];if(!f)return;if(!f.type.startsWith('image/')){setError('Choose a JPG, PNG or WebP image.');return}if(f.size>9*1024*1024){setError('Image must be under 9 MB.');return}const r=new FileReader();r.onload=()=>{setImage(String(r.result));setFileName(f.name);setMatches([]);setSelected([]);setError('');setMessage('Template loaded. Run AI detection to locate school-name areas.')};r.readAsDataURL(f)}
- async function analyze(){if(!image)return;setBusy(true);setError('');setMessage('');try{const r=await fetch('/api/banner-studio/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageDataUrl:await makeAnalysisImage(image)})});const d=await r.json();if(!r.ok)throw new Error(d.error||'AI analysis failed');const rawFound=Array.isArray(d.matches)?d.matches as Match[]:[];const found=await sampleNearbyBackgrounds(image,rawFound);setMatches(found);setSelected(found.map((_:Match,i:number)=>i));setMessage(found.length?'Found '+found.length+' possible name area(s). Check every position before exporting.':d.note||'No school-name areas found. Try another template.') }catch(e){setError(e instanceof Error?e.message:'Unable to analyze image.')}finally{setBusy(false)}}
- function save(){if(!image)return;const label=templateName.trim()||fileName||'School banner';const next=[{id:String(Date.now()),name:label,image},...templates.filter(t=>t.name!==label)].slice(0,12);try{localStorage.setItem(STORE,JSON.stringify(next));setTemplates(next);setMessage('Template saved in this browser on this device.');setError('')}catch{setError('Browser storage is full. Use a smaller image or delete saved templates.')}}
+ async function analyze(){if(!image)return;setBusy(true);setError('');setMessage('');try{const r=await fetch('/api/banner-studio/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageDataUrl:await makeAnalysisImage(image)})});const raw=await r.text();let d:any;try{d=JSON.parse(raw)}catch{throw new Error('AI service returned a non-JSON response (HTTP '+r.status+'). Open Vercel → Deployments and check the latest deployment and GEMINI_API_KEY.')}if(!r.ok)throw new Error(d.error||'AI analysis failed');const rawFound=Array.isArray(d.matches)?d.matches as Match[]:[];const found=await sampleNearbyBackgrounds(image,rawFound);setMatches(found);setSelected(found.map((_:Match,i:number)=>i));setMessage(found.length?'Found '+found.length+' possible name area(s). Check every position before exporting.':d.note||'No school-name areas found. Try another template.') }catch(e){setError(e instanceof Error?e.message:'Unable to analyze image.')}finally{setBusy(false)}}
+ function save(){if(!image)return;const label=templateName.trim()||fileName||'School banner';const next=[{id:String(Date.now()),name:label,image},...templates.filter(t=>t.name!==label)].slice(0,60);void saveTemplateStore(next).then(()=>{setTemplates(next);setMessage('Template saved on this device. Up to 60 templates can be stored.');setError('')}).catch(()=>setError('Could not save this template. Check available device storage or use a smaller image.'))}
  function load(t:Template){setImage(t.image);setFileName(t.name);setTemplateName(t.name);setMatches([]);setSelected([]);setMessage('Template loaded. Run AI detection to find name areas.')}
- function del(id:string){const next=templates.filter(t=>t.id!==id);setTemplates(next);try{localStorage.setItem(STORE,JSON.stringify(next))}catch{}}
+ function del(id:string){const next=templates.filter(t=>t.id!==id);void saveTemplateStore(next).then(()=>setTemplates(next)).catch(()=>setError('Could not update saved templates.'))}
  function exportJpg(){if(!image)return;const im=new window.Image();im.onload=()=>{const c=document.createElement('canvas');c.width=im.naturalWidth*scale;c.height=im.naturalHeight*scale;const ctx=c.getContext('2d');if(!ctx)return;ctx.drawImage(im,0,0,c.width,c.height);active.forEach(m=>{const x=m.x*c.width,y=m.y*c.height,w=m.width*c.width,h=m.height*c.height;ctx.fillStyle=m.background;ctx.fillRect(x,y,w,h);if(name.trim()){ctx.fillStyle=m.textColor;ctx.textAlign=(m.align as CanvasTextAlign)||'center';ctx.textBaseline='middle';ctx.font='700 '+Math.min(m.fontSize*c.width/1000,h*.78)+'px Arial, sans-serif';const tx=m.align==='left'?x+4:m.align==='right'?x+w-4:x+w/2;ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();ctx.fillText(name.trim(),tx,y+h/2,w-8);ctx.restore()}});const a=document.createElement('a');a.download=(name||fileName||'school-banner').replace(/[^\p{L}\p{N}-]+/gu,'-')+'.jpg';a.href=c.toDataURL('image/jpeg',.96);a.click();setMessage('JPG exported. Review text and print quality before printing.')};im.onerror=()=>setError('Could not render this image.');im.src=image}
  const printSize=size==='6.5x4.5'?'78in 54in':size==='3x2'?'36in 24in':'48in 36in';
  return <main className="banner-studio-page"><style>{`
@@ -29,7 +29,7 @@ export default function BannerStudioPage(){
  <div className="bs-field"><label htmlFor="bs-scale">JPG resolution multiplier: {scale}×</label><input id="bs-scale" type="range" min="1" max="3" value={scale} onChange={e=>setScale(Number(e.target.value))}/></div>
  <div className="bs-row"><button className="bs-btn bs-primary" onClick={exportJpg} disabled={!image}><Download size={15}/> Export JPG</button><button className="bs-btn" onClick={()=>image&&window.print()} disabled={!image}><FileText size={15}/> Print / Save PDF</button></div>
  {message&&<div className="bs-note">{message}</div>}{error&&<div className="bs-note bs-error">{error}</div>}
- <div style={{marginTop:24}}><h2>Saved templates</h2><p className="bs-muted">Stored in this browser on this device (up to 12).</p>{!templates.length?<p className="bs-muted">Your saved templates appear here.</p>:<div className="bs-list">{templates.map(t=><div className="bs-template" key={t.id}><img className="bs-thumb" src={t.image} alt=""/><button className="bs-icon bs-template-name" onClick={()=>load(t)}>{t.name}</button><button className="bs-icon" onClick={()=>del(t.id)} aria-label={'Delete '+t.name}><Trash2 size={15}/></button></div>)}</div>}</div>
+ <div style={{marginTop:24}}><h2>Saved templates</h2><p className="bs-muted">Stored on this device in browser storage (up to 60).</p>{!templates.length?<p className="bs-muted">Your saved templates appear here.</p>:<div className="bs-list">{templates.map(t=><div className="bs-template" key={t.id}><img className="bs-thumb" src={t.image} alt=""/><button className="bs-icon bs-template-name" onClick={()=>load(t)}>{t.name}</button><button className="bs-icon" onClick={()=>del(t.id)} aria-label={'Delete '+t.name}><Trash2 size={15}/></button></div>)}</div>}</div>
  </section><section className="bs-card"><h2>2. Preview & review</h2><p className="bs-muted">AI coordinates are suggestions. Confirm every old name is fully covered before printing.</p>
  <div className="bs-preview-wrap">{image?<div className="bs-preview"><img src={image} alt="Banner preview"/>{active.map((m,i)=><div key={i} className="bs-cover" style={{left:m.x*100+'%',top:m.y*100+'%',width:m.width*100+'%',height:m.height*100+'%',background:m.background,color:m.textColor,fontSize:'clamp(8px,'+m.fontSize/10+'vw,26px)',textAlign:m.align as 'left'|'center'|'right'}}>{name.trim()}</div>)}</div>:<div style={{textAlign:'center',padding:30,color:'#7b8494'}}><ImagePlus size={34}/><p>Upload a template to preview it here.</p></div>}</div>
  {matches.length>0&&<div className="bs-list"><b style={{fontSize:13}}>Detected areas ({selected.length} selected)</b>{matches.map((m,i)=><label className="bs-match" key={i}><input type="checkbox" checked={selected.includes(i)} onChange={e=>setSelected(old=>e.target.checked?[...old,i]:old.filter(n=>n!==i))}/><span><b>{m.text||'School-name area'}</b><br/>Position {Math.round(m.x*100)}%, {Math.round(m.y*100)}%</span></label>)}</div>}
@@ -71,5 +71,25 @@ function sampleNearbyBackgrounds(dataUrl:string,matches:Match[]):Promise<Match[]
    });resolve(result);
   }catch{resolve(matches)}};
   img.onerror=()=>resolve(matches);img.src=dataUrl;
+ });
+}
+
+
+// IndexedDB is designed for larger image blobs/data URLs; localStorage usually fills up quickly.
+function loadTemplateStore():Promise<Template[]>{
+ return new Promise((resolve,reject)=>{
+  if(typeof indexedDB==='undefined'){try{resolve(JSON.parse(localStorage.getItem(STORE)||'[]'))}catch(e){reject(e)}return}
+  const req=indexedDB.open('guru-kalyanam-banner-studio',1);
+  req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains('templates'))req.result.createObjectStore('templates')};
+  req.onerror=()=>reject(req.error);
+  req.onsuccess=()=>{const tx=req.result.transaction('templates','readonly');const get=tx.objectStore('templates').get(STORE);get.onsuccess=()=>resolve(Array.isArray(get.result)?get.result:[]);get.onerror=()=>reject(get.error)};
+ });
+}
+function saveTemplateStore(items:Template[]):Promise<void>{
+ return new Promise((resolve,reject)=>{
+  if(typeof indexedDB==='undefined'){try{localStorage.setItem(STORE,JSON.stringify(items));resolve()}catch(e){reject(e)}return}
+  const req=indexedDB.open('guru-kalyanam-banner-studio',1);
+  req.onerror=()=>reject(req.error);
+  req.onsuccess=()=>{const db=req.result;const tx=db.transaction('templates','readwrite');tx.objectStore('templates').put(items,STORE);tx.oncomplete=()=>{db.close();resolve()};tx.onerror=()=>{db.close();reject(tx.error)};tx.onabort=()=>{db.close();reject(tx.error)}};
  });
 }
