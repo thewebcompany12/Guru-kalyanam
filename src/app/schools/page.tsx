@@ -6,7 +6,7 @@ import { LocateFixed, Plus, Search, School as SchoolIcon, Trash2, Pencil, MapPin
 import AppNav from '@/components/AppNav';
 import { createClient } from '@/lib/supabase';
 
-const empty={name:'',udise_code:'',address:'',district:'',state:'Uttar Pradesh',school_type:'OTHER',principal_name:'',latitude:'',longitude:''};
+const empty={name:'',udise_code:'',address:'',district:'',state:'Uttar Pradesh',school_type:'OTHER',principal_name:'',latitude:'',longitude:'',contact_name:'',contact_designation:'',contact_phone:'',contact_whatsapp:'',contact_primary:true};
 
 export default function SchoolsPage(){
  const [schools,setSchools]=useState<any[]>([]),[form,setForm]=useState<any>(empty),[editing,setEditing]=useState<string|null>(null);
@@ -24,7 +24,24 @@ export default function SchoolsPage(){
      await client.from('locations').update({is_current:false}).eq('school_id',savedId);
      await client.from('locations').insert({school_id:savedId,latitude:Number(form.latitude),longitude:Number(form.longitude),captured_at:new Date().toISOString(),source:'school_form',is_current:true});
    }
-   if(r.error)setError(r.error.message);else{setForm(empty);setEditing(null);await load()}setSaving(false);
+   if(r.error)setError(r.error.message);else{
+     let contactWarning='';
+     if(!editing&&savedId&&form.contact_name.trim()){
+       const {data:{user}}=await client.auth.getUser();
+       const contact=await client.from('school_contacts').insert({
+         school_id:savedId,
+         name:form.contact_name.trim(),
+         designation:form.contact_designation.trim()||null,
+         phone:form.contact_phone.trim()||null,
+         whatsapp_number:form.contact_whatsapp.trim()||form.contact_phone.trim()||null,
+         is_primary:form.contact_primary,
+         created_by:user?.id
+       });
+       if(contact.error)contactWarning='School saved, but the contact could not be saved: '+contact.error.message;
+     }
+     setForm(empty);setEditing(null);await load();
+     if(contactWarning)setError(contactWarning);
+   }setSaving(false);
  };
  const remove=async(id:string)=>{if(!confirm('Delete this school and its related records?'))return;const r=await client.from('schools').delete().eq('id',id);if(r.error)setError(r.error.message);else load()};
  return <div className="min-h-screen flex bg-slate-50"><AppNav/><main className="flex-1 min-w-0 p-4 md:p-8"><div className="max-w-6xl mx-auto animate-fade-up">
@@ -34,6 +51,14 @@ export default function SchoolsPage(){
    <form onSubmit={save} className="card p-5 h-fit space-y-3 animate-fade-up"><h2 className="font-bold flex items-center gap-2"><span className="section-icon bg-emerald-100 text-emerald-700"><SchoolIcon size={16}/></span>{editing?'Edit school':'New school'}</h2>
     {['name','udise_code','principal_name','district','state','address'].map(k=><label key={k} className="block text-sm font-medium capitalize">{k.replace('_',' ')}{k==='name'&&<span className="text-red-500"> *</span>}<input required={k==='name'} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} className="mt-1 w-full rounded-xl border px-3 py-2.5 transition focus:border-emerald-400"/></label>)}
     <label className="block text-sm font-medium">School type<select value={form.school_type} onChange={e=>setForm({...form,school_type:e.target.value})} className="mt-1 w-full rounded-xl border px-3 py-2.5"><option>PRIMARY</option><option>UPPER_PRIMARY</option><option>SECONDARY</option><option>SENIOR_SECONDARY</option><option>OTHER</option></select></label>
+    {!editing&&<div className="border-t border-slate-100 pt-4 mt-2 space-y-3">
+      <div><h3 className="font-bold text-sm flex items-center gap-2"><span className="section-icon bg-violet-100 text-violet-700"><Users size={15}/></span>School contact <span className="font-normal text-slate-400">(optional)</span></h3><p className="mt-1 text-xs text-slate-500">Add the head teacher or school contact now—no need to open Contacts separately.</p></div>
+      <label className="block text-sm font-medium">Contact name<input value={form.contact_name} onChange={e=>setForm({...form,contact_name:e.target.value})} placeholder="e.g. Head teacher" className="mt-1 w-full rounded-xl border px-3 py-2.5"/></label>
+      <label className="block text-sm font-medium">Designation<input value={form.contact_designation} onChange={e=>setForm({...form,contact_designation:e.target.value})} placeholder="e.g. Principal / Head teacher" className="mt-1 w-full rounded-xl border px-3 py-2.5"/></label>
+      <label className="block text-sm font-medium">Phone number<input inputMode="tel" value={form.contact_phone} onChange={e=>setForm({...form,contact_phone:e.target.value})} placeholder="Contact phone" className="mt-1 w-full rounded-xl border px-3 py-2.5"/></label>
+      <label className="block text-sm font-medium">WhatsApp number<input inputMode="tel" value={form.contact_whatsapp} onChange={e=>setForm({...form,contact_whatsapp:e.target.value})} placeholder="Leave blank to use phone number" className="mt-1 w-full rounded-xl border px-3 py-2.5"/></label>
+      <label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={form.contact_primary} onChange={e=>setForm({...form,contact_primary:e.target.checked})}/>Primary school contact</label>
+    </div>}
     <div className="grid grid-cols-2 gap-2"><input placeholder="Latitude" value={form.latitude} onChange={e=>setForm({...form,latitude:e.target.value})} className="rounded-xl border px-3 py-2.5"/><input placeholder="Longitude" value={form.longitude} onChange={e=>setForm({...form,longitude:e.target.value})} className="rounded-xl border px-3 py-2.5"/></div>
     <button type="button" onClick={locate} className="w-full rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 py-2.5 flex justify-center gap-2 items-center transition hover:-translate-y-0.5"><LocateFixed size={17}/>Use current location</button>
     <p className="text-xs text-slate-500">GPS coordinates are saved with the school and a location history record is kept when you tap Save school.</p>
