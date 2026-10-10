@@ -10,7 +10,7 @@ export default function BannerStudioPage(){
  useEffect(()=>{try{setTemplates(JSON.parse(localStorage.getItem(STORE)||'[]'))}catch{}},[]);
  const active=matches.filter((_,i)=>selected.includes(i));
  function upload(e:ChangeEvent<HTMLInputElement>){const f=e.target.files?.[0];if(!f)return;if(!f.type.startsWith('image/')){setError('Choose a JPG, PNG or WebP image.');return}if(f.size>9*1024*1024){setError('Image must be under 9 MB.');return}const r=new FileReader();r.onload=()=>{setImage(String(r.result));setFileName(f.name);setMatches([]);setSelected([]);setError('');setMessage('Template loaded. Run AI detection to locate school-name areas.')};r.readAsDataURL(f)}
- async function analyze(){if(!image)return;setBusy(true);setError('');setMessage('');try{const r=await fetch('/api/banner-studio/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageDataUrl:image})});const d=await r.json();if(!r.ok)throw new Error(d.error||'AI analysis failed');const found=Array.isArray(d.matches)?d.matches as Match[]:[];setMatches(found);setSelected(found.map((_:Match,i:number)=>i));setMessage(found.length?'Found '+found.length+' possible name area(s). Check every position before exporting.':d.note||'No school-name areas found. Try another template.') }catch(e){setError(e instanceof Error?e.message:'Unable to analyze image.')}finally{setBusy(false)}}
+ async function analyze(){if(!image)return;setBusy(true);setError('');setMessage('');try{const r=await fetch('/api/banner-studio/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageDataUrl:await makeAnalysisImage(image)})});const d=await r.json();if(!r.ok)throw new Error(d.error||'AI analysis failed');const found=Array.isArray(d.matches)?d.matches as Match[]:[];setMatches(found);setSelected(found.map((_:Match,i:number)=>i));setMessage(found.length?'Found '+found.length+' possible name area(s). Check every position before exporting.':d.note||'No school-name areas found. Try another template.') }catch(e){setError(e instanceof Error?e.message:'Unable to analyze image.')}finally{setBusy(false)}}
  function save(){if(!image)return;const label=templateName.trim()||fileName||'School banner';const next=[{id:String(Date.now()),name:label,image},...templates.filter(t=>t.name!==label)].slice(0,12);try{localStorage.setItem(STORE,JSON.stringify(next));setTemplates(next);setMessage('Template saved in this browser on this device.');setError('')}catch{setError('Browser storage is full. Use a smaller image or delete saved templates.')}}
  function load(t:Template){setImage(t.image);setFileName(t.name);setTemplateName(t.name);setMatches([]);setSelected([]);setMessage('Template loaded. Run AI detection to find name areas.')}
  function del(id:string){const next=templates.filter(t=>t.id!==id);setTemplates(next);try{localStorage.setItem(STORE,JSON.stringify(next))}catch{}}
@@ -37,4 +37,14 @@ export default function BannerStudioPage(){
  </section></div>
  {image&&<div className="bs-print"><img src={image} alt=""/>{active.map((m,i)=><div key={i} className="bs-print-cover" style={{left:m.x*100+'%',top:m.y*100+'%',width:m.width*100+'%',height:m.height*100+'%',background:m.background,color:m.textColor,fontSize:m.fontSize/10+'vw',textAlign:m.align as 'left'|'center'|'right'}}>{name.trim()}</div>)}</div>}
  </main>
+}
+
+
+function makeAnalysisImage(dataUrl:string):Promise<string>{
+ return new Promise((resolve,reject)=>{
+  const img=new window.Image();
+  img.onload=()=>{const max=1600;const ratio=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.naturalWidth*ratio));canvas.height=Math.max(1,Math.round(img.naturalHeight*ratio));const ctx=canvas.getContext('2d');if(!ctx){reject(new Error('Unable to prepare image for AI analysis.'));return}ctx.drawImage(img,0,0,canvas.width,canvas.height);resolve(canvas.toDataURL('image/jpeg',0.82))};
+  img.onerror=()=>reject(new Error('Unable to read the uploaded image.'));
+  img.src=dataUrl;
+ });
 }
