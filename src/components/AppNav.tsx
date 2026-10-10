@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { School, LayoutDashboard, ClipboardList, IndianRupee, BarChart3, ListTodo, Bell, Users, Package, Truck, PackageCheck, WalletCards, Settings, MapPin, FileText, TrendingUp, AlertTriangle, CalendarClock, Boxes, CheckSquare, MessageCircle, X, ChevronRight, Plus, ArrowUpRight } from 'lucide-react';
+import { School, LayoutDashboard, ClipboardList, IndianRupee, BarChart3, ListTodo, Bell, Users, Package, Truck, PackageCheck, WalletCards, Settings, MapPin, FileText, TrendingUp, AlertTriangle, CalendarClock, Boxes, CheckSquare, MessageCircle, FileImage, X, ChevronRight, Plus, ArrowUpRight } from 'lucide-react';
 import { useState } from 'react';
 import GlobalSearch from '@/components/GlobalSearch';
 
@@ -14,14 +14,14 @@ const items = [
   ['/receivables', 'School receivables', AlertTriangle], ['/statements', 'School statements', FileText], ['/supplier-payments', 'Supplier payments', WalletCards], ['/supplier-payment-vouchers', 'Supplier payment vouchers', FileText],
   ['/supplier-statements', 'Supplier statements', FileText], ['/supplier-performance', 'Supplier performance', TrendingUp], ['/expenses', 'Expenses', WalletCards],
   ['/deliveries', 'Deliveries', Truck], ['/payments', 'Payments', IndianRupee], ['/payment-receipts', 'Payment receipts', FileText], ['/invoices', 'GST invoices', FileText],
-  ['/whatsapp', 'WhatsApp', MessageCircle], ['/reminders', 'Reminders', CheckSquare], ['/tasks', 'Tasks', CheckSquare], ['/notifications', 'Notifications', Bell],
+  ['/banner-studio', 'Banner & Flag Studio', FileImage], ['/whatsapp', 'WhatsApp', MessageCircle], ['/reminders', 'Reminders', CheckSquare], ['/tasks', 'Tasks', CheckSquare], ['/notifications', 'Notifications', Bell],
   ['/reports', 'Reports', BarChart3], ['/school-collection-performance', 'School collection performance', TrendingUp], ['/insights', 'Monthly insights', TrendingUp], ['/timeline', 'Timeline', ClipboardList], ['/settings', 'Settings', Settings],
 ] as const;
 const groups:[string,string[]][]=[
  ['OVERVIEW',['/','/work-queue']],['FIELD OPERATIONS',['/schools','/contacts','/visits','/follow-ups','/map']],
  ['SALES & ORDERS',['/orders','/order-fulfilment','/pipeline','/templates']],['CATALOG & SUPPLIERS',['/products','/inventory','/stock-movements','/suppliers','/purchases','/purchase-receiving']],
  ['MONEY & FULFILMENT',['/receivables','/statements','/supplier-payments','/supplier-payment-vouchers','/supplier-statements','/supplier-performance','/expenses','/deliveries','/payments','/invoices']],
- ['COMMUNICATION & TASKS',['/whatsapp','/reminders','/tasks','/notifications']],['INSIGHTS & SETTINGS',['/reports','/insights','/timeline','/settings']]
+ ['DESIGN STUDIO',['/banner-studio']],['COMMUNICATION & TASKS',['/whatsapp','/reminders','/tasks','/notifications']],['INSIGHTS & SETTINGS',['/reports','/insights','/timeline','/settings']]
 ];
 const mobileItems=[['/','Home',LayoutDashboard],['/schools','Schools',School],['/orders','Orders',ClipboardList],['/payments','Money',IndianRupee],['/reports','Reports',BarChart3],['/work-queue','More',ListTodo]] as const;
 
