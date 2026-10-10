@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   const key = process.env.GEMINI_API_KEY;
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
               { inlineData: { mimeType, data } },
             ],
           }],
-          generationConfig: { responseMimeType: 'application/json', temperature: 0.1 },
+          generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 1200, thinkingConfig: { thinkingLevel: 'low' } },
         }),
       },
     );
