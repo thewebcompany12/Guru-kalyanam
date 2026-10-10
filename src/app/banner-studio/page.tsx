@@ -10,7 +10,7 @@ export default function BannerStudioPage(){
  useEffect(()=>{try{setTemplates(JSON.parse(localStorage.getItem(STORE)||'[]'))}catch{}},[]);
  const active=matches.filter((_,i)=>selected.includes(i));
  function upload(e:ChangeEvent<HTMLInputElement>){const f=e.target.files?.[0];if(!f)return;if(!f.type.startsWith('image/')){setError('Choose a JPG, PNG or WebP image.');return}if(f.size>9*1024*1024){setError('Image must be under 9 MB.');return}const r=new FileReader();r.onload=()=>{setImage(String(r.result));setFileName(f.name);setMatches([]);setSelected([]);setError('');setMessage('Template loaded. Run AI detection to locate school-name areas.')};r.readAsDataURL(f)}
- async function analyze(){if(!image)return;setBusy(true);setError('');setMessage('');try{const r=await fetch('/api/banner-studio/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageDataUrl:await makeAnalysisImage(image)})});const d=await r.json();if(!r.ok)throw new Error(d.error||'AI analysis failed');const found=Array.isArray(d.matches)?d.matches as Match[]:[];setMatches(found);setSelected(found.map((_:Match,i:number)=>i));setMessage(found.length?'Found '+found.length+' possible name area(s). Check every position before exporting.':d.note||'No school-name areas found. Try another template.') }catch(e){setError(e instanceof Error?e.message:'Unable to analyze image.')}finally{setBusy(false)}}
+ async function analyze(){if(!image)return;setBusy(true);setError('');setMessage('');try{const r=await fetch('/api/banner-studio/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageDataUrl:await makeAnalysisImage(image)})});const d=await r.json();if(!r.ok)throw new Error(d.error||'AI analysis failed');const rawFound=Array.isArray(d.matches)?d.matches as Match[]:[];const found=await sampleNearbyBackgrounds(image,rawFound);setMatches(found);setSelected(found.map((_:Match,i:number)=>i));setMessage(found.length?'Found '+found.length+' possible name area(s). Check every position before exporting.':d.note||'No school-name areas found. Try another template.') }catch(e){setError(e instanceof Error?e.message:'Unable to analyze image.')}finally{setBusy(false)}}
  function save(){if(!image)return;const label=templateName.trim()||fileName||'School banner';const next=[{id:String(Date.now()),name:label,image},...templates.filter(t=>t.name!==label)].slice(0,12);try{localStorage.setItem(STORE,JSON.stringify(next));setTemplates(next);setMessage('Template saved in this browser on this device.');setError('')}catch{setError('Browser storage is full. Use a smaller image or delete saved templates.')}}
  function load(t:Template){setImage(t.image);setFileName(t.name);setTemplateName(t.name);setMatches([]);setSelected([]);setMessage('Template loaded. Run AI detection to find name areas.')}
  function del(id:string){const next=templates.filter(t=>t.id!==id);setTemplates(next);try{localStorage.setItem(STORE,JSON.stringify(next))}catch{}}
@@ -46,5 +46,30 @@ function makeAnalysisImage(dataUrl:string):Promise<string>{
   img.onload=()=>{const max=1600;const ratio=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.naturalWidth*ratio));canvas.height=Math.max(1,Math.round(img.naturalHeight*ratio));const ctx=canvas.getContext('2d');if(!ctx){reject(new Error('Unable to prepare image for AI analysis.'));return}ctx.drawImage(img,0,0,canvas.width,canvas.height);resolve(canvas.toDataURL('image/jpeg',0.82))};
   img.onerror=()=>reject(new Error('Unable to read the uploaded image.'));
   img.src=dataUrl;
+ });
+}
+
+
+// Sample the actual template pixels immediately around each detected name box.
+// This avoids using a guessed, overly saturated AI colour for simple backgrounds.
+function sampleNearbyBackgrounds(dataUrl:string,matches:Match[]):Promise<Match[]>{
+ return new Promise(resolve=>{
+  const img=new window.Image();
+  img.onload=()=>{try{
+   const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
+   const ctx=c.getContext('2d',{willReadFrequently:true});if(!ctx){resolve(matches);return}ctx.drawImage(img,0,0);
+   const result=matches.map(m=>{
+    const x=Math.max(0,Math.min(c.width-1,Math.round(m.x*c.width))),y=Math.max(0,Math.min(c.height-1,Math.round(m.y*c.height)));
+    const w=Math.max(1,Math.min(c.width-x,Math.round(m.width*c.width))),h=Math.max(1,Math.min(c.height-y,Math.round(m.height*c.height)));
+    const pad=Math.max(2,Math.round(Math.min(w,h)*0.12));const samples:number[][]=[];
+    const add=(sx:number,sy:number)=>{if(sx<0||sy<0||sx>=c.width||sy>=c.height)return;const p=ctx.getImageData(sx,sy,1,1).data;samples.push([p[0],p[1],p[2]])};
+    for(let i=0;i<24;i++){const t=i/23;const xx=x+Math.round(t*w);add(xx,y-pad);add(xx,y+h+pad);const yy=y+Math.round(t*h);add(x-pad,yy);add(x+w+pad,yy)}
+    if(!samples.length)return m;
+    const channel=(n:number)=>Math.round(samples.reduce((s,p)=>s+p[n],0)/samples.length);
+    const hex='#'+[channel(0),channel(1),channel(2)].map(v=>v.toString(16).padStart(2,'0')).join('');
+    return {...m,background:hex};
+   });resolve(result);
+  }catch{resolve(matches)}};
+  img.onerror=()=>resolve(matches);img.src=dataUrl;
  });
 }
