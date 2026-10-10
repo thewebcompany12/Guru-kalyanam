@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { LocateFixed, Plus, Search, School as SchoolIcon, Trash2, Pencil, MapPin, Navigation, Sparkles } from 'lucide-react';
+import { LocateFixed, Plus, Search, School as SchoolIcon, Trash2, Pencil, MapPin, Navigation, Sparkles, Users } from 'lucide-react';
 import AppNav from '@/components/AppNav';
 import { createClient } from '@/lib/supabase';
 
