@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=' + encodeURIComponent(key),
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=' + encodeURIComponent(key),
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -40,8 +40,9 @@ export async function POST(request: NextRequest) {
               { inlineData: { mimeType, data } },
             ],
           }],
-          generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 1200, thinkingConfig: { thinkingLevel: 'low' } },
+          generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 900, thinkingConfig: { thinkingLevel: 'low' } },
         }),
+        signal: AbortSignal.timeout(35000),
       },
     );
 
@@ -70,7 +71,10 @@ export async function POST(request: NextRequest) {
       align: ['left', 'right', 'center'].includes(String(item.align)) ? item.align : 'center',
     }));
     return NextResponse.json({ matches });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      return NextResponse.json({ error: 'AI analysis took too long. Please retry once; if the image is large, crop it and try again.' }, { status: 504 });
+    }
     return NextResponse.json({ error: 'Unable to analyze this image right now. Please try again.' }, { status: 500 });
   }
 }
