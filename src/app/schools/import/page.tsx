@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import * as XLSX from 'xlsx';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle2, FileSpreadsheet, Upload, AlertTriangle, Loader2, Save, Users } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, FileSpreadsheet, AlertTriangle, Loader2, Save, Users } from 'lucide-react';
 import AppNav from '@/components/AppNav';
 import { createClient } from '@/lib/supabase';
 
