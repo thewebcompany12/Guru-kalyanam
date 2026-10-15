@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
+import * as XLSX from 'xlsx';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, FileSpreadsheet, Upload, AlertTriangle, Loader2, Save, Users } from 'lucide-react';
 import AppNav from '@/components/AppNav';
@@ -21,42 +22,21 @@ const fields: {key:Field; label:string; aliases:string[]}[] = [
  {key:'contact_phone',label:'Phone number',aliases:['phone','phone number','mobile','mobile number','contact number','मोबाइल','मोबाइल नंबर','फोन नंबर']},
  {key:'contact_whatsapp',label:'WhatsApp number',aliases:['whatsapp','whatsapp number','व्हाट्सएप नंबर']}
 ];
-const norm=(s:string)=>String(s??'').trim().toLocaleLowerCase().replace(/[\\s_./-]+/g,' ').replace(/[ः:]/g,'').trim();
+const norm=(s:string)=>String(s??'').trim().toLocaleLowerCase().replace(/[\s_./-]+/g,' ').replace(/[ः:]/g,'').trim();
 const matchHeader=(header:string, f:typeof fields[number])=>f.aliases.some(a=>norm(a)===norm(header)) || (f.key==='name'&&norm(header)==='name');
-declare global { interface Window { XLSX?: any } }
 
 export default function SchoolExcelImportPage(){
  const [fileName,setFileName]=useState(''),[headers,setHeaders]=useState<string[]>([]),[rows,setRows]=useState<Row[]>([]),[mapping,setMapping]=useState<Record<Field,string>>({} as Record<Field,string>);
  const [busy,setBusy]=useState(false),[saving,setSaving]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
  const inputRef=useRef<HTMLInputElement>(null);
  const validRows=useMemo(()=>rows.filter(r=>String(r[mapping.name]||'').trim()),[rows,mapping]);
- async function loadXlsx(){
-  if(window.XLSX)return window.XLSX;
-  const sources=[
-   'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
-   'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
-  ];
-  let lastError:unknown;
-  for(const src of sources){
-   try{
-    await new Promise<void>((resolve,reject)=>{
-     const s=document.createElement('script');s.src=src;s.async=true;
-     s.onload=()=>window.XLSX?resolve():reject(new Error('Excel reader loaded but did not initialize.'));
-     s.onerror=()=>reject(new Error('Could not load '+new URL(src).hostname));
-     document.head.appendChild(s);
-    });
-    if(window.XLSX)return window.XLSX;
-   }catch(e){lastError=e;}
-  }
-  throw new Error('Excel reader could not load from either source. Check your internet connection, disable any content blocker, and try again. '+(lastError instanceof Error?lastError.message:''));
- }
  async function handleFile(file?:File){
   if(!file)return;
   const lower=file.name.toLocaleLowerCase();
-  if(!/\\.(xlsx|xls|csv)$/.test(lower)){setError('Please choose an .xlsx, .xls, or .csv file.');return;}
+  if(!/\.(xlsx|xls|csv)$/.test(lower)){setError('Please choose an .xlsx, .xls, or .csv file.');return;}
   setBusy(true);setError('');setMessage('');setFileName(file.name);
   try{
-   const XLSX=await loadXlsx();const data=await file.arrayBuffer();const wb=XLSX.read(data,{type:'array',cellDates:false});
+   const data=await file.arrayBuffer();const wb=XLSX.read(data,{type:'array',cellDates:false});
    const sheet=wb.Sheets[wb.SheetNames[0]];const matrix=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false}) as unknown[][];
    if(matrix.length<2)throw new Error('The first worksheet needs a header row and at least one data row.');
    const hs=(matrix[0]||[]).map((v,i)=>String(v??'').trim()||('Column '+(i+1)));
