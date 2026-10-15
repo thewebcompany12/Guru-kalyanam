@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import * as XLSX from 'xlsx';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, FileSpreadsheet, Upload, AlertTriangle, Loader2, Save, Users } from 'lucide-react';
@@ -28,7 +28,7 @@ const matchHeader=(header:string, f:typeof fields[number])=>f.aliases.some(a=>no
 export default function SchoolExcelImportPage(){
  const [fileName,setFileName]=useState(''),[headers,setHeaders]=useState<string[]>([]),[rows,setRows]=useState<Row[]>([]),[mapping,setMapping]=useState<Record<Field,string>>({} as Record<Field,string>);
  const [busy,setBusy]=useState(false),[saving,setSaving]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
- const inputRef=useRef<HTMLInputElement>(null);
+
  const validRows=useMemo(()=>rows.filter(r=>String(r[mapping.name]||'').trim()),[rows,mapping]);
  async function handleFile(file?:File){
   if(!file)return;
@@ -36,7 +36,7 @@ export default function SchoolExcelImportPage(){
   if(!/\.(xlsx|xls|csv)$/.test(lower)){setError('Please choose an .xlsx, .xls, or .csv file.');return;}
   setBusy(true);setError('');setMessage('');setFileName(file.name);
   try{
-   const data=await file.arrayBuffer();const wb=XLSX.read(data,{type:'array',cellDates:false});
+   const data=await new Promise<ArrayBuffer>((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(new Error('Your browser could not read this file. Please save it to your device and try again.'));reader.onload=()=>{if(reader.result instanceof ArrayBuffer)resolve(reader.result);else reject(new Error('The selected file could not be read. Please choose it again.'));};reader.readAsArrayBuffer(file);});const wb=XLSX.read(data,{type:'array',cellDates:false});
    const sheet=wb.Sheets[wb.SheetNames[0]];const matrix=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false}) as unknown[][];
    if(matrix.length<2)throw new Error('The first worksheet needs a header row and at least one data row.');
    const hs=(matrix[0]||[]).map((v,i)=>String(v??'').trim()||('Column '+(i+1)));
@@ -140,9 +140,10 @@ export default function SchoolExcelImportPage(){
   {message&&<div className="mb-4 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-800 p-3 text-sm flex gap-2"><CheckCircle2 size={18} className="shrink-0"/><span>{message}</span></div>}
   <section className="card p-5 md:p-6 mb-5"><div onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();handleFile(e.dataTransfer.files?.[0])}} className="rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/50 p-7 md:p-10 text-center">
    <span className="section-icon bg-emerald-100 text-emerald-700 mx-auto mb-3"><FileSpreadsheet size={24}/></span><h2 className="font-bold text-lg">Upload your school Excel sheet</h2><p className="text-sm text-slate-500 mt-1">Excel workbook (.xlsx / .xls) or CSV. The first worksheet is used.</p>
-   <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" className="hidden" onChange={e=>{const file=e.target.files?.[0];if(file)handleFile(file);e.currentTarget.value='';}}/>
-   <button onClick={()=>inputRef.current?.click()} disabled={busy} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-600 text-white px-5 py-3 font-semibold shadow-sm disabled:opacity-60">{busy?<Loader2 className="animate-spin" size={18}/>:<Upload size={18}/>} {busy?'Reading file…':'Choose Excel file'}</button>
-   {fileName&&<p className="text-xs text-slate-500 mt-3">Selected: {fileName}</p>}
+   <p className="text-sm text-slate-600 mt-3">On mobile, select the file and confirm <strong>Open</strong> or <strong>Use this file</strong> in the file picker.</p>
+   <input type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" disabled={busy} className="block w-full max-w-xl mx-auto mt-4 rounded-xl border border-emerald-200 bg-white p-3 text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-4 file:py-3 file:font-semibold file:text-white disabled:opacity-60" onChange={e=>{const input=e.currentTarget;const file=input.files?.[0];input.value='';if(file){void handleFile(file);}else{setError('No file was returned by the file picker. Please choose the file again and confirm Open/Use this file.');}}}/>
+   {busy&&<p className="text-sm font-medium text-emerald-700 mt-3"><Loader2 className="inline animate-spin mr-2" size={16}/>Reading {fileName||'selected file'}…</p>}
+   {fileName&&!busy&&<p className="text-xs text-slate-600 mt-3">Selected file: <strong>{fileName}</strong></p>}
   </div></section>
   {headers.length>0&&<><section className="card p-5 mb-5"><div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4"><div><h2 className="font-bold text-lg">Check column matching</h2><p className="text-sm text-slate-500">Detected by header names; adjust any field that is mapped incorrectly. Existing schools are edited and unmatched schools are created. GPS/location is never changed.</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-sm">{validRows.length} school rows</span></div>
    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">{fields.map(f=><label key={f.key} className="block text-sm font-medium">{f.label}<select value={mapping[f.key]||''} onChange={e=>updateMap(f.key,e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5"><option value="">— Not mapped —</option>{headers.map(h=><option key={h} value={h}>{h}</option>)}</select></label>)}</div>
