@@ -53,7 +53,7 @@ export default function SchoolExcelImportPage(){
  async function importRows(){
   if(!mapping.name){setError('Map the School name column before importing.');return}
   const ready=validRows;if(!ready.length){setError('No rows with a school name were found.');return}
-  if(!confirm('Match '+ready.length+' spreadsheet rows to EXISTING schools only? Missing school details will be filled in, contact details will be added/updated, no new school records will be created, and GPS/location will not be changed.'))return;
+  if(!confirm('Process '+ready.length+' spreadsheet rows? Matching schools will be updated, unmatched schools will be created, contact details will be added/updated, and GPS/location will not be changed or created.'))return;
   setSaving(true);setError('');setMessage('');
   try{
    const client=createClient();
@@ -69,29 +69,35 @@ export default function SchoolExcelImportPage(){
     if(code){const byCode=schoolList.find(s=>normName(s.udise_code)===normName(code));if(byCode)return byCode;}
     return schoolList.find(s=>normName(s.name)===normName(name));
    };
-   let updated=0,contactsAdded=0,contactsUpdated=0,unmatched=0,failed=0;
+   let createdSchools=0,updated=0,contactsAdded=0,contactsUpdated=0,unmatched=0,failed=0;
    const problems:string[]=[];
    const {data:{user}}=await client.auth.getUser();
    for(let i=0;i<ready.length;i++){
     const r=ready[i];const get=(k:Field)=>String(r[mapping[k]||'']||'').trim();
     const name=get('name'),code=get('udise_code');
-    const school=findSchool(name,code);
-    if(!school){unmatched++;r.__status='No matching school — not created';continue;}
-    const patch:any={};
-    const fill=(key:string,value:string)=>{if(value&&(!String(school[key]??'').trim()))patch[key]=value;};
-    fill('udise_code',code);
-    fill('principal_name',get('principal_name'));
-    fill('district',get('district'));
-    fill('state',get('state'));
-    fill('address',get('address'));
+    let school=findSchool(name,code);
     const incomingType=get('school_type').toUpperCase().replace(/[ -]+/g,'_');
     const schoolType=['PRIMARY','UPPER_PRIMARY','SECONDARY','SENIOR_SECONDARY','OTHER'].includes(incomingType)?incomingType:
       /upper|उच्च/i.test(incomingType)?'UPPER_PRIMARY':/senior|higher secondary/i.test(incomingType)?'SENIOR_SECONDARY':/secondary|माध्यमिक/i.test(incomingType)?'SECONDARY':/primary|प्राथमिक/i.test(incomingType)?'PRIMARY':'';
-    if(schoolType&&schoolType!=='OTHER'&&(!school.school_type||school.school_type==='OTHER'))patch.school_type=schoolType;
-    if(Object.keys(patch).length){
-      const saved=await client.from('schools').update(patch).eq('id',school.id);
-      if(saved.error){failed++;r.__status='School update failed';r.__error=saved.error.message;if(problems.length<5)problems.push('Row '+(i+2)+': '+saved.error.message);continue;}
-      Object.assign(school,patch);updated++;
+    if(!school){
+      const payload:any={name,udise_code:code||null,principal_name:get('principal_name')||null,district:get('district')||null,state:get('state')||'Uttar Pradesh',address:get('address')||null,school_type:schoolType||'OTHER',latitude:null,longitude:null};
+      const {data:newSchool,error:createError}=await client.from('schools').insert(payload).select('id,name,udise_code,principal_name,district,state,address,school_type').single();
+      if(createError||!newSchool){failed++;unmatched++;r.__status='School creation failed';r.__error=createError?.message||'Could not create school';if(problems.length<5)problems.push('Row '+(i+2)+': '+r.__error);continue;}
+      school={...newSchool};schoolList.push(school);createdSchools++;
+    }else{
+      const patch:any={};
+      const setProvided=(key:string,value:string)=>{if(value&&String(school[key]??'').trim()!==value)patch[key]=value;};
+      setProvided('udise_code',code);
+      setProvided('principal_name',get('principal_name'));
+      setProvided('district',get('district'));
+      setProvided('state',get('state'));
+      setProvided('address',get('address'));
+      if(schoolType&&schoolType!=='OTHER'&&school.school_type!==schoolType)patch.school_type=schoolType;
+      if(Object.keys(patch).length){
+        const saved=await client.from('schools').update(patch).eq('id',school.id);
+        if(saved.error){failed++;r.__status='School update failed';r.__error=saved.error.message;if(problems.length<5)problems.push('Row '+(i+2)+': '+saved.error.message);continue;}
+        Object.assign(school,patch);updated++;
+      }
     }
     const contactName=get('contact_name')||get('principal_name');
     const designation=get('contact_designation')||(get('principal_name')?'Headmaster / Principal':'');
@@ -111,10 +117,10 @@ export default function SchoolExcelImportPage(){
         list.push(created);contactsBySchool.set(school.id,list);contactsAdded++;
       }else{
         const contactPatch:any={};
-        if(contactName&&!String(contact.name||'').trim())contactPatch.name=contactName;
-        if(designation&&!String(contact.designation||'').trim())contactPatch.designation=designation;
-        if(phone&&!String(contact.phone||'').trim())contactPatch.phone=phone;
-        if(whatsapp&&!String(contact.whatsapp_number||'').trim())contactPatch.whatsapp_number=whatsapp;
+        if(contactName&&String(contact.name||'').trim()!==contactName)contactPatch.name=contactName;
+        if(designation&&String(contact.designation||'').trim()!==designation)contactPatch.designation=designation;
+        if(phone&&String(contact.phone||'').trim()!==phone)contactPatch.phone=phone;
+        if(whatsapp&&String(contact.whatsapp_number||'').trim()!==whatsapp)contactPatch.whatsapp_number=whatsapp;
         if(Object.keys(contactPatch).length){
           const {error:contactError}=await client.from('school_contacts').update(contactPatch).eq('id',contact.id);
           if(contactError){failed++;r.__status='School matched; contact update failed';r.__error=contactError.message;if(problems.length<5)problems.push('Row '+(i+2)+' contact: '+contactError.message);continue;}
@@ -122,16 +128,16 @@ export default function SchoolExcelImportPage(){
         }
       }
     }
-    r.__status='Matched existing school; updated';
+    r.__status='School/contact details processed';
    }
    setRows([...rows]);
-   setMessage('Finished: '+updated+' school records updated with missing details, '+contactsAdded+' contacts added, '+contactsUpdated+' existing contacts completed, '+unmatched+' rows did not match an existing school (not created), '+failed+' errors. GPS/location was left unchanged.');
+   setMessage('Finished: '+createdSchools+' new schools created, '+updated+' existing school records updated, '+contactsAdded+' contacts added, '+contactsUpdated+' existing contacts edited, '+failed+' errors. GPS/location was not changed; new schools have no GPS location.');
    if(problems.length)setError(problems.join(' | '));
   }catch(e){setError(e instanceof Error?e.message:'Import failed.');}finally{setSaving(false)}
  }
  return <div className="min-h-screen flex bg-slate-50"><AppNav/><main className="flex-1 min-w-0 p-4 md:p-8"><div className="max-w-6xl mx-auto animate-fade-up">
   <Link href="/schools" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-emerald-700 mb-4"><ArrowLeft size={16}/>Back to Schools</Link>
-  <div className="mb-6"><p className="text-sm font-semibold text-emerald-600 flex items-center gap-2"><FileSpreadsheet size={16}/>Bulk school setup</p><h1 className="text-3xl font-bold mt-1">Import schools from Excel</h1><p className="text-slate-500 mt-2 max-w-3xl">Upload an .xlsx, .xls or .csv file. The app matches rows to schools already in your database, fills missing details and adds contact information. It will not create new school records or change GPS/location.</p></div>
+  <div className="mb-6"><p className="text-sm font-semibold text-emerald-600 flex items-center gap-2"><FileSpreadsheet size={16}/>Bulk school setup</p><h1 className="text-3xl font-bold mt-1">Import schools from Excel</h1><p className="text-slate-500 mt-2 max-w-3xl">Upload an .xlsx, .xls or .csv file. Matching schools are updated, new schools are created when no match is found, and contact details are added or edited. GPS/location is never imported.</p></div>
   {error&&<div className="mb-4 rounded-xl bg-red-50 border border-red-100 text-red-700 p-3 text-sm flex gap-2"><AlertTriangle size={18} className="shrink-0 mt-0.5"/><span>{error}</span></div>}
   {message&&<div className="mb-4 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-800 p-3 text-sm flex gap-2"><CheckCircle2 size={18} className="shrink-0"/><span>{message}</span></div>}
   <section className="card p-5 md:p-6 mb-5"><div onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();handleFile(e.dataTransfer.files?.[0])}} className="rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/50 p-7 md:p-10 text-center">
@@ -140,11 +146,11 @@ export default function SchoolExcelImportPage(){
    <button onClick={()=>inputRef.current?.click()} disabled={busy} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-600 text-white px-5 py-3 font-semibold shadow-sm disabled:opacity-60">{busy?<Loader2 className="animate-spin" size={18}/>:<Upload size={18}/>} {busy?'Reading file…':'Choose Excel file'}</button>
    {fileName&&<p className="text-xs text-slate-500 mt-3">Selected: {fileName}</p>}
   </div></section>
-  {headers.length>0&&<><section className="card p-5 mb-5"><div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4"><div><h2 className="font-bold text-lg">Check column matching</h2><p className="text-sm text-slate-500">Detected by header names; adjust any field that is mapped incorrectly. Only existing schools are updated. GPS/location is never changed.</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-sm">{validRows.length} school rows</span></div>
+  {headers.length>0&&<><section className="card p-5 mb-5"><div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4"><div><h2 className="font-bold text-lg">Check column matching</h2><p className="text-sm text-slate-500">Detected by header names; adjust any field that is mapped incorrectly. Existing schools are edited and unmatched schools are created. GPS/location is never changed.</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-sm">{validRows.length} school rows</span></div>
    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">{fields.map(f=><label key={f.key} className="block text-sm font-medium">{f.label}<select value={mapping[f.key]||''} onChange={e=>updateMap(f.key,e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5"><option value="">— Not mapped —</option>{headers.map(h=><option key={h} value={h}>{h}</option>)}</select></label>)}</div>
-   <div className="mt-5 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between"><p className="text-xs text-slate-500">Review the preview below before saving. 100% accuracy cannot be guaranteed when headers or source data are ambiguous.</p><button onClick={importRows} disabled={saving||!mapping.name||!validRows.length} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white px-5 py-3 font-semibold disabled:opacity-50">{saving?<Loader2 className="animate-spin" size={18}/>:<Save size={18}/>} {saving?'Updating existing schools…':'Update existing schools'}</button></div>
+   <div className="mt-5 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between"><p className="text-xs text-slate-500">Review the preview below before saving. 100% accuracy cannot be guaranteed when headers or source data are ambiguous.</p><button onClick={importRows} disabled={saving||!mapping.name||!validRows.length} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white px-5 py-3 font-semibold disabled:opacity-50">{saving?<Loader2 className="animate-spin" size={18}/>:<Save size={18}/>} {saving?'Saving school and contact changes…':'Create new + update existing'}</button></div>
   </section>
   <section className="card overflow-hidden"><div className="p-4 border-b border-slate-100"><h2 className="font-bold">Preview and import status</h2><p className="text-xs text-slate-500 mt-1">Showing first 25 rows. Original spreadsheet values are preserved.</p></div><div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-slate-50 text-left text-slate-500"><tr><th className="p-3">#</th>{[...fields.filter(f=>mapping[f.key]).slice(0,5)].map(f=><th className="p-3 whitespace-nowrap" key={f.key}>{f.label.replace(' *','')}</th>)}<th className="p-3">Status</th></tr></thead><tbody>{rows.slice(0,25).map((r,i)=><tr key={i} className="border-t border-slate-100"><td className="p-3 text-slate-400">{i+2}</td>{fields.filter(f=>mapping[f.key]).slice(0,5).map(f=><td key={f.key} className="p-3 max-w-56 truncate">{r[mapping[f.key]]||'—'}</td>)}<td className="p-3 whitespace-nowrap">{r.__status||'Ready'}{r.__error&&<p className="text-xs text-red-600 max-w-48 whitespace-normal">{r.__error}</p>}</td></tr>)}</tbody></table></div></section></>}
-  <div className="mt-5 flex items-start gap-2 text-xs text-slate-500"><Users size={16} className="shrink-0"/><p>Only records that match an existing school by UDISE code or school name are processed. Missing school fields are filled without overwriting populated details. Contact details are added to the matched school or used to complete a matching contact. Rows that do not match an existing school are skipped; no new school records or GPS locations are created.</p></div>
+  <div className="mt-5 flex items-start gap-2 text-xs text-slate-500"><Users size={16} className="shrink-0"/><p>Rows are matched by UDISE code first, then school name. Matching schools are updated from non-empty spreadsheet values; unmatched rows create new school records. Contact details are added or update the matching contact. GPS/location is never imported or modified.</p></div>
  </div></main></div>;
 }
