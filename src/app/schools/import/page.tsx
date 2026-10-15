@@ -53,39 +53,85 @@ export default function SchoolExcelImportPage(){
  async function importRows(){
   if(!mapping.name){setError('Map the School name column before importing.');return}
   const ready=validRows;if(!ready.length){setError('No rows with a school name were found.');return}
-  if(!confirm('Import '+ready.length+' school rows? Existing schools with the same UDISE code or school name will be skipped. GPS location will remain empty.'))return;
+  if(!confirm('Match '+ready.length+' spreadsheet rows to EXISTING schools only? Missing school details will be filled in, contact details will be added/updated, no new school records will be created, and GPS/location will not be changed.'))return;
   setSaving(true);setError('');setMessage('');
   try{
-   const client=createClient();const existing=await client.from('schools').select('id,name,udise_code');
+   const client=createClient();
+   const existing=await client.from('schools').select('id,name,udise_code,principal_name,district,state,address,school_type');
    if(existing.error)throw new Error(existing.error.message);
-   const names=new Set((existing.data||[]).map((s:any)=>norm(s.name)));const codes=new Set((existing.data||[]).map((s:any)=>norm(s.udise_code||'' )).filter(Boolean));
-   let added=0,skipped=0,failed=0;const problems:string[]=[];
+   const contactsResult=await client.from('school_contacts').select('id,school_id,name,designation,phone,whatsapp_number,is_primary');
+   if(contactsResult.error)throw new Error(contactsResult.error.message);
+   const schoolList:any[]=(existing.data||[]).map((s:any)=>({...s}));
+   const contactsBySchool=new Map<string,any[]>();
+   for(const c of (contactsResult.data||[])){const list=contactsBySchool.get(c.school_id)||[];list.push({...c});contactsBySchool.set(c.school_id,list);}
+   const normName=(v:any)=>norm(String(v||''));
+   const findSchool=(name:string,code:string)=> {
+    if(code){const byCode=schoolList.find(s=>normName(s.udise_code)===normName(code));if(byCode)return byCode;}
+    return schoolList.find(s=>normName(s.name)===normName(name));
+   };
+   let updated=0,contactsAdded=0,contactsUpdated=0,unmatched=0,failed=0;
+   const problems:string[]=[];
    const {data:{user}}=await client.auth.getUser();
    for(let i=0;i<ready.length;i++){
     const r=ready[i];const get=(k:Field)=>String(r[mapping[k]||'']||'').trim();
     const name=get('name'),code=get('udise_code');
-    if(names.has(norm(name))||(code&&codes.has(norm(code)))){skipped++;r.__status='Skipped duplicate';continue}
-    const rawType=get('school_type').toUpperCase().replace(/[ -]+/g,'_');
-    const schoolType=['PRIMARY','UPPER_PRIMARY','SECONDARY','SENIOR_SECONDARY','OTHER'].includes(rawType)?rawType:
-      /upper|उच्च/.test(rawType)?'UPPER_PRIMARY':/senior|higher secondary/.test(rawType)?'SENIOR_SECONDARY':/secondary|माध्यमिक/.test(rawType)?'SECONDARY':/primary|प्राथमिक/.test(rawType)?'PRIMARY':'OTHER';
-    const payload={name,udise_code:code||null,address:get('address')||null,district:get('district')||null,state:get('state')||'Uttar Pradesh',school_type:schoolType,principal_name:get('principal_name')||null,latitude:null,longitude:null};
-    const saved=await client.from('schools').insert(payload).select('id').single();
-    if(saved.error||!saved.data?.id){failed++;r.__status='Failed';r.__error=saved.error?.message||'School could not be saved';if(problems.length<5)problems.push('Row '+(i+2)+': '+r.__error);continue}
-    names.add(norm(name));if(code)codes.add(norm(code));
-    const contactName=get('contact_name')||get('principal_name');
-    if(contactName){
-      const contact=await client.from('school_contacts').insert({school_id:saved.data.id,name:contactName,designation:get('contact_designation')||(get('principal_name')?'Headmaster / Principal':null),phone:get('contact_phone')||null,whatsapp_number:get('contact_whatsapp')||get('contact_phone')||null,is_primary:true,created_by:user?.id});
-      if(contact.error){r.__status='School saved; contact failed';r.__error=contact.error.message;failed++;if(problems.length<5)problems.push('Row '+(i+2)+' contact: '+contact.error.message);continue}
+    const school=findSchool(name,code);
+    if(!school){unmatched++;r.__status='No matching school — not created';continue;}
+    const patch:any={};
+    const fill=(key:string,value:string)=>{if(value&&(!String(school[key]??'').trim()))patch[key]=value;};
+    fill('udise_code',code);
+    fill('principal_name',get('principal_name'));
+    fill('district',get('district'));
+    fill('state',get('state'));
+    fill('address',get('address'));
+    const incomingType=get('school_type').toUpperCase().replace(/[ -]+/g,'_');
+    const schoolType=['PRIMARY','UPPER_PRIMARY','SECONDARY','SENIOR_SECONDARY','OTHER'].includes(incomingType)?incomingType:
+      /upper|उच्च/i.test(incomingType)?'UPPER_PRIMARY':/senior|higher secondary/i.test(incomingType)?'SENIOR_SECONDARY':/secondary|माध्यमिक/i.test(incomingType)?'SECONDARY':/primary|प्राथमिक/i.test(incomingType)?'PRIMARY':'';
+    if(schoolType&&schoolType!=='OTHER'&&(!school.school_type||school.school_type==='OTHER'))patch.school_type=schoolType;
+    if(Object.keys(patch).length){
+      const saved=await client.from('schools').update(patch).eq('id',school.id);
+      if(saved.error){failed++;r.__status='School update failed';r.__error=saved.error.message;if(problems.length<5)problems.push('Row '+(i+2)+': '+saved.error.message);continue;}
+      Object.assign(school,patch);updated++;
     }
-    added++;r.__status='Imported';
+    const contactName=get('contact_name')||get('principal_name');
+    const designation=get('contact_designation')||(get('principal_name')?'Headmaster / Principal':'');
+    const phone=get('contact_phone'),whatsapp=get('contact_whatsapp')||phone;
+    const hasContactInput=!!(contactName||designation||phone||whatsapp);
+    if(hasContactInput){
+      const list=contactsBySchool.get(school.id)||[];
+      const incomingName=normName(contactName),incomingPhone=normName(phone);
+      let contact=list.find((c:any)=>(incomingName&&normName(c.name)===incomingName)||(incomingPhone&&normName(c.phone)===incomingPhone)||(incomingPhone&&normName(c.whatsapp_number)===incomingPhone));
+      if(!contact){
+        const {data:created,error:contactError}=await client.from('school_contacts').insert({
+          school_id:school.id,name:contactName||designation||phone||'School contact',
+          designation:designation||null,phone:phone||null,whatsapp_number:whatsapp||null,
+          is_primary:list.length===0,created_by:user?.id
+        }).select('id,school_id,name,designation,phone,whatsapp_number,is_primary').single();
+        if(contactError||!created){failed++;r.__status='School matched; contact failed';r.__error=contactError?.message||'Contact could not be saved';if(problems.length<5)problems.push('Row '+(i+2)+' contact: '+r.__error);continue;}
+        list.push(created);contactsBySchool.set(school.id,list);contactsAdded++;
+      }else{
+        const contactPatch:any={};
+        if(contactName&&!String(contact.name||'').trim())contactPatch.name=contactName;
+        if(designation&&!String(contact.designation||'').trim())contactPatch.designation=designation;
+        if(phone&&!String(contact.phone||'').trim())contactPatch.phone=phone;
+        if(whatsapp&&!String(contact.whatsapp_number||'').trim())contactPatch.whatsapp_number=whatsapp;
+        if(Object.keys(contactPatch).length){
+          const {error:contactError}=await client.from('school_contacts').update(contactPatch).eq('id',contact.id);
+          if(contactError){failed++;r.__status='School matched; contact update failed';r.__error=contactError.message;if(problems.length<5)problems.push('Row '+(i+2)+' contact: '+contactError.message);continue;}
+          Object.assign(contact,contactPatch);contactsUpdated++;
+        }
+      }
+    }
+    r.__status='Matched existing school; updated';
    }
-   setRows([...rows]);setMessage('Finished: '+added+' schools added, '+skipped+' duplicates skipped, '+failed+' errors. Check row statuses below.');
+   setRows([...rows]);
+   setMessage('Finished: '+updated+' school records updated with missing details, '+contactsAdded+' contacts added, '+contactsUpdated+' existing contacts completed, '+unmatched+' rows did not match an existing school (not created), '+failed+' errors. GPS/location was left unchanged.');
    if(problems.length)setError(problems.join(' | '));
   }catch(e){setError(e instanceof Error?e.message:'Import failed.');}finally{setSaving(false)}
  }
  return <div className="min-h-screen flex bg-slate-50"><AppNav/><main className="flex-1 min-w-0 p-4 md:p-8"><div className="max-w-6xl mx-auto animate-fade-up">
   <Link href="/schools" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-emerald-700 mb-4"><ArrowLeft size={16}/>Back to Schools</Link>
-  <div className="mb-6"><p className="text-sm font-semibold text-emerald-600 flex items-center gap-2"><FileSpreadsheet size={16}/>Bulk school setup</p><h1 className="text-3xl font-bold mt-1">Import schools from Excel</h1><p className="text-slate-500 mt-2 max-w-3xl">Upload an .xlsx, .xls or .csv file with 200–300 school rows. The app detects likely columns, lets you correct the matches, skips existing schools, and leaves GPS location blank.</p></div>
+  <div className="mb-6"><p className="text-sm font-semibold text-emerald-600 flex items-center gap-2"><FileSpreadsheet size={16}/>Bulk school setup</p><h1 className="text-3xl font-bold mt-1">Import schools from Excel</h1><p className="text-slate-500 mt-2 max-w-3xl">Upload an .xlsx, .xls or .csv file. The app matches rows to schools already in your database, fills missing details and adds contact information. It will not create new school records or change GPS/location.</p></div>
   {error&&<div className="mb-4 rounded-xl bg-red-50 border border-red-100 text-red-700 p-3 text-sm flex gap-2"><AlertTriangle size={18} className="shrink-0 mt-0.5"/><span>{error}</span></div>}
   {message&&<div className="mb-4 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-800 p-3 text-sm flex gap-2"><CheckCircle2 size={18} className="shrink-0"/><span>{message}</span></div>}
   <section className="card p-5 md:p-6 mb-5"><div onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();handleFile(e.dataTransfer.files?.[0])}} className="rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/50 p-7 md:p-10 text-center">
@@ -94,11 +140,11 @@ export default function SchoolExcelImportPage(){
    <button onClick={()=>inputRef.current?.click()} disabled={busy} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-600 text-white px-5 py-3 font-semibold shadow-sm disabled:opacity-60">{busy?<Loader2 className="animate-spin" size={18}/>:<Upload size={18}/>} {busy?'Reading file…':'Choose Excel file'}</button>
    {fileName&&<p className="text-xs text-slate-500 mt-3">Selected: {fileName}</p>}
   </div></section>
-  {headers.length>0&&<><section className="card p-5 mb-5"><div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4"><div><h2 className="font-bold text-lg">Check column matching</h2><p className="text-sm text-slate-500">Detected by header names; adjust any field that is mapped incorrectly. Location coordinates are intentionally not imported.</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-sm">{validRows.length} school rows</span></div>
+  {headers.length>0&&<><section className="card p-5 mb-5"><div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4"><div><h2 className="font-bold text-lg">Check column matching</h2><p className="text-sm text-slate-500">Detected by header names; adjust any field that is mapped incorrectly. Only existing schools are updated. GPS/location is never changed.</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-sm">{validRows.length} school rows</span></div>
    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">{fields.map(f=><label key={f.key} className="block text-sm font-medium">{f.label}<select value={mapping[f.key]||''} onChange={e=>updateMap(f.key,e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5"><option value="">— Not mapped —</option>{headers.map(h=><option key={h} value={h}>{h}</option>)}</select></label>)}</div>
-   <div className="mt-5 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between"><p className="text-xs text-slate-500">Review the preview below before saving. 100% accuracy cannot be guaranteed when headers or source data are ambiguous.</p><button onClick={importRows} disabled={saving||!mapping.name||!validRows.length} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white px-5 py-3 font-semibold disabled:opacity-50">{saving?<Loader2 className="animate-spin" size={18}/>:<Save size={18}/>} {saving?'Importing schools…':'Import '+validRows.length+' schools'}</button></div>
+   <div className="mt-5 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between"><p className="text-xs text-slate-500">Review the preview below before saving. 100% accuracy cannot be guaranteed when headers or source data are ambiguous.</p><button onClick={importRows} disabled={saving||!mapping.name||!validRows.length} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white px-5 py-3 font-semibold disabled:opacity-50">{saving?<Loader2 className="animate-spin" size={18}/>:<Save size={18}/>} {saving?'Importing schools…':'Update existing schools}</button></div>
   </section>
   <section className="card overflow-hidden"><div className="p-4 border-b border-slate-100"><h2 className="font-bold">Preview and import status</h2><p className="text-xs text-slate-500 mt-1">Showing first 25 rows. Original spreadsheet values are preserved.</p></div><div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-slate-50 text-left text-slate-500"><tr><th className="p-3">#</th>{[...fields.filter(f=>mapping[f.key]).slice(0,5)].map(f=><th className="p-3 whitespace-nowrap" key={f.key}>{f.label.replace(' *','')}</th>)}<th className="p-3">Status</th></tr></thead><tbody>{rows.slice(0,25).map((r,i)=><tr key={i} className="border-t border-slate-100"><td className="p-3 text-slate-400">{i+2}</td>{fields.filter(f=>mapping[f.key]).slice(0,5).map(f=><td key={f.key} className="p-3 max-w-56 truncate">{r[mapping[f.key]]||'—'}</td>)}<td className="p-3 whitespace-nowrap">{r.__status||'Ready'}{r.__error&&<p className="text-xs text-red-600 max-w-48 whitespace-normal">{r.__error}</p>}</td></tr>)}</tbody></table></div></section></>}
-  <div className="mt-5 flex items-start gap-2 text-xs text-slate-500"><Users size={16} className="shrink-0"/><p>School name and headmaster fields are stored on the school record. A teacher/contact record is created when a teacher or headmaster name is available. If your Excel has multiple teachers in separate rows for one school, review the sheet structure before importing; duplicate school rows are skipped rather than merged automatically.</p></div>
+  <div className="mt-5 flex items-start gap-2 text-xs text-slate-500"><Users size={16} className="shrink-0"/><p>Only records that match an existing school by UDISE code or school name are processed. Missing school fields are filled without overwriting populated details. Contact details are added to the matched school or used to complete a matching contact. Rows that do not match an existing school are skipped; no new school records or GPS locations are created.</p></div>
  </div></main></div>;
 }
