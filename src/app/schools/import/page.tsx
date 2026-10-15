@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, FileSpreadsheet, AlertTriangle, Loader2, Save, Users } from 'lucide-react';
@@ -28,6 +28,14 @@ const matchHeader=(header:string, f:typeof fields[number])=>f.aliases.some(a=>no
 export default function SchoolExcelImportPage(){
  const [fileName,setFileName]=useState(''),[headers,setHeaders]=useState<string[]>([]),[rows,setRows]=useState<Row[]>([]),[mapping,setMapping]=useState<Record<Field,string>>({} as Record<Field,string>);
  const [busy,setBusy]=useState(false),[saving,setSaving]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
+ const processingInput=useRef(false);
+ function onExcelInput(input:HTMLInputElement){
+  const file=input.files?.[0];
+  if(!file){setError('The phone returned no file to the page. Please try Browse/Files and tap Select once. If this repeats, use Chrome browser instead of an installed app shortcut.');return;}
+  if(processingInput.current)return;
+  processingInput.current=true;setError('');setFileName(file.name);
+  void handleFile(file).finally(()=>{input.value='';processingInput.current=false;});
+ }
 
  const validRows=useMemo(()=>rows.filter(r=>String(r[mapping.name]||'').trim()),[rows,mapping]);
  async function handleFile(file?:File){
@@ -141,7 +149,7 @@ export default function SchoolExcelImportPage(){
   <section className="card p-5 md:p-6 mb-5"><div onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();handleFile(e.dataTransfer.files?.[0])}} className="rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/50 p-7 md:p-10 text-center">
    <span className="section-icon bg-emerald-100 text-emerald-700 mx-auto mb-3"><FileSpreadsheet size={24}/></span><h2 className="font-bold text-lg">Upload your school Excel sheet</h2><p className="text-sm text-slate-500 mt-1">Excel workbook (.xlsx / .xls) or CSV. The first worksheet is used.</p>
    <p className="text-sm text-slate-600 mt-3">On mobile, select the file and confirm <strong>Open</strong> or <strong>Use this file</strong> in the file picker.</p>
-   <input type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" disabled={busy} className="block w-full max-w-xl mx-auto mt-4 rounded-xl border border-emerald-200 bg-white p-3 text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-4 file:py-3 file:font-semibold file:text-white disabled:opacity-60" onChange={async e=>{const input=e.currentTarget;const file=input.files?.[0];if(!file){setError('Android did not return the selected file. In the file picker, tap Select/Open in the top-right corner. If you selected it from Drive, first download it to your device, then choose it from Downloads.');return;}setFileName(file.name);await handleFile(file);input.value='';}}/>
+   <input type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" disabled={busy} className="block w-full max-w-xl mx-auto mt-4 rounded-xl border border-emerald-200 bg-white p-3 text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-4 file:py-3 file:font-semibold file:text-white disabled:opacity-60" onClick={e=>{e.currentTarget.value='';setError('');setMessage('');}} onInput={e=>onExcelInput(e.currentTarget)} onChange={e=>onExcelInput(e.currentTarget)}/>
    {busy&&<p className="text-sm font-medium text-emerald-700 mt-3"><Loader2 className="inline animate-spin mr-2" size={16}/>Reading {fileName||'selected file'}…</p>}
    {fileName&&!busy&&<p className="text-xs text-slate-600 mt-3">Selected file: <strong>{fileName}</strong></p>}
   </div></section>
