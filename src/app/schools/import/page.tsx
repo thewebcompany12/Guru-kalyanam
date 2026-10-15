@@ -6,7 +6,7 @@ import { ArrowLeft, CheckCircle2, FileSpreadsheet, Upload, AlertTriangle, Loader
 import AppNav from '@/components/AppNav';
 import { createClient } from '@/lib/supabase';
 
-type Row = { [key: string]: string; __status?: string; __error?: string };
+type Row = { [key: string]: string | undefined; __status?: string; __error?: string };
 type Field = 'name'|'udise_code'|'principal_name'|'district'|'state'|'address'|'school_type'|'contact_name'|'contact_designation'|'contact_phone'|'contact_whatsapp';
 const fields: {key:Field; label:string; aliases:string[]}[] = [
  {key:'name',label:'School name *',aliases:['school name','school','विद्यालय का नाम','विद्यालय','स्कूल का नाम','संस्था का नाम','name of school','school_name']},
