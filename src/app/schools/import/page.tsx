@@ -41,10 +41,20 @@ export default function SchoolExcelImportPage(){
  async function handleFile(file?:File){
   if(!file)return;
   const lower=file.name.toLocaleLowerCase();
-  if(!/\.(xlsx|xls|csv)$/.test(lower)){setError('Please choose an .xlsx, .xls, or .csv file.');return;}
-  setBusy(true);setError('');setMessage('');setFileName(file.name);
+  const mime=String(file.type||'').toLocaleLowerCase();
+  const hasSpreadsheetExtension=/\.(xlsx|xls|xlsm|xlsb|csv)$/.test(lower);
+  const hasSpreadsheetMime=/spreadsheetml\.sheet|application\/vnd\.ms-excel|text\/csv|application\/csv/.test(mime);
+  const hasUnsupportedExtension=/\.[a-z0-9]{1,8}$/.test(lower)&&!hasSpreadsheetExtension;
+  if((hasUnsupportedExtension&&!hasSpreadsheetMime)||(!file.name&&file.size===0)){setError('Please select an Excel or CSV file (.xlsx, .xls, .xlsm, .xlsb, or .csv).');return;}
+  if(file.size===0){setError('The selected file is empty. Download/save it to your phone first, then choose it again.');return;}
+  setBusy(true);setError('');setMessage('');setFileName(file.name||'Selected spreadsheet');
   try{
-   const data=await new Promise<ArrayBuffer>((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(new Error('Your browser could not read this file. Please save it to your device and try again.'));reader.onload=()=>{if(reader.result instanceof ArrayBuffer)resolve(reader.result);else reject(new Error('The selected file could not be read. Please choose it again.'));};reader.readAsArrayBuffer(file);});const wb=XLSX.read(data,{type:'array',cellDates:false});
+   let data:ArrayBuffer|undefined;
+   if(typeof file.arrayBuffer==='function'){
+    try{const buffer=await file.arrayBuffer();if(buffer.byteLength)data=buffer;}catch{/* Older Android file providers may require FileReader. */}
+   }
+   if(!data)data=await new Promise<ArrayBuffer>((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(new Error('Your browser could not read this file. Download/save it to your phone first, then choose it from Downloads.'));reader.onload=()=>{if(reader.result instanceof ArrayBuffer&&reader.result.byteLength)resolve(reader.result);else reject(new Error('The selected file was empty or could not be read. Please save it to your device and try again.'));};reader.readAsArrayBuffer(file);});
+   const wb=XLSX.read(data,{type:'array',cellDates:false});
    const sheet=wb.Sheets[wb.SheetNames[0]];const matrix=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false}) as unknown[][];
    if(matrix.length<2)throw new Error('The first worksheet needs a header row and at least one data row.');
    const hs=(matrix[0]||[]).map((v,i)=>String(v??'').trim()||('Column '+(i+1)));
@@ -149,7 +159,7 @@ export default function SchoolExcelImportPage(){
   <section className="card p-5 md:p-6 mb-5"><div onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();handleFile(e.dataTransfer.files?.[0])}} className="rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/50 p-7 md:p-10 text-center">
    <span className="section-icon bg-emerald-100 text-emerald-700 mx-auto mb-3"><FileSpreadsheet size={24}/></span><h2 className="font-bold text-lg">Upload your school Excel sheet</h2><p className="text-sm text-slate-500 mt-1">Excel workbook (.xlsx / .xls) or CSV. The first worksheet is used.</p>
    <p className="text-sm text-slate-600 mt-3">On mobile, select the file and confirm <strong>Open</strong> or <strong>Use this file</strong> in the file picker.</p>
-   <input type="file" aria-label="Choose Excel or CSV file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" disabled={busy} className="block w-full max-w-xl mx-auto mt-4 rounded-xl border border-emerald-200 bg-white p-3 text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-4 file:py-3 file:font-semibold file:text-white disabled:opacity-60" onClick={e=>{e.currentTarget.value='';setError('');setMessage('');}} onChange={e=>onExcelInput(e.currentTarget)}/>
+   <input type="file" aria-label="Choose Excel or CSV file" accept=".xlsx,.xls,.xlsm,.xlsb,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.ms-excel.sheet.binary.macroEnabled.12,text/csv" disabled={busy} className="block w-full max-w-xl mx-auto mt-4 rounded-xl border border-emerald-200 bg-white p-3 text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-4 file:py-3 file:font-semibold file:text-white disabled:opacity-60" onClick={e=>{e.currentTarget.value='';setError('');setMessage('');}} onInput={e=>onExcelInput(e.currentTarget)} onChange={e=>onExcelInput(e.currentTarget)}/>
    {busy&&<p className="text-sm font-medium text-emerald-700 mt-3"><Loader2 className="inline animate-spin mr-2" size={16}/>Reading {fileName||'selected file'}…</p>}
    {fileName&&!busy&&<p className="text-xs text-slate-600 mt-3">Selected file: <strong>{fileName}</strong></p>}
   </div></section>
