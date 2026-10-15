@@ -32,11 +32,29 @@ export default function SchoolExcelImportPage(){
  const validRows=useMemo(()=>rows.filter(r=>String(r[mapping.name]||'').trim()),[rows,mapping]);
  async function loadXlsx(){
   if(window.XLSX)return window.XLSX;
-  await new Promise<void>((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';s.onload=()=>resolve();s.onerror=()=>reject(new Error('Excel reader could not load. Check internet and try again.'));document.head.appendChild(s);});
-  if(!window.XLSX)throw new Error('Excel reader did not initialize.');return window.XLSX;
+  const sources=[
+   'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+   'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
+  ];
+  let lastError:unknown;
+  for(const src of sources){
+   try{
+    await new Promise<void>((resolve,reject)=>{
+     const s=document.createElement('script');s.src=src;s.async=true;
+     s.onload=()=>window.XLSX?resolve():reject(new Error('Excel reader loaded but did not initialize.'));
+     s.onerror=()=>reject(new Error('Could not load '+new URL(src).hostname));
+     document.head.appendChild(s);
+    });
+    if(window.XLSX)return window.XLSX;
+   }catch(e){lastError=e;}
+  }
+  throw new Error('Excel reader could not load from either source. Check your internet connection, disable any content blocker, and try again. '+(lastError instanceof Error?lastError.message:''));
  }
  async function handleFile(file?:File){
-  if(!file)return;setBusy(true);setError('');setMessage('');setFileName(file.name);
+  if(!file)return;
+  const lower=file.name.toLocaleLowerCase();
+  if(!/\\.(xlsx|xls|csv)$/.test(lower)){setError('Please choose an .xlsx, .xls, or .csv file.');return;}
+  setBusy(true);setError('');setMessage('');setFileName(file.name);
   try{
    const XLSX=await loadXlsx();const data=await file.arrayBuffer();const wb=XLSX.read(data,{type:'array',cellDates:false});
    const sheet=wb.Sheets[wb.SheetNames[0]];const matrix=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false}) as unknown[][];
@@ -142,7 +160,7 @@ export default function SchoolExcelImportPage(){
   {message&&<div className="mb-4 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-800 p-3 text-sm flex gap-2"><CheckCircle2 size={18} className="shrink-0"/><span>{message}</span></div>}
   <section className="card p-5 md:p-6 mb-5"><div onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();handleFile(e.dataTransfer.files?.[0])}} className="rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/50 p-7 md:p-10 text-center">
    <span className="section-icon bg-emerald-100 text-emerald-700 mx-auto mb-3"><FileSpreadsheet size={24}/></span><h2 className="font-bold text-lg">Upload your school Excel sheet</h2><p className="text-sm text-slate-500 mt-1">Excel workbook (.xlsx / .xls) or CSV. The first worksheet is used.</p>
-   <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={e=>handleFile(e.target.files?.[0])}/>
+   <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" className="hidden" onChange={e=>{const file=e.target.files?.[0];if(file)handleFile(file);e.currentTarget.value='';}}/>
    <button onClick={()=>inputRef.current?.click()} disabled={busy} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-600 text-white px-5 py-3 font-semibold shadow-sm disabled:opacity-60">{busy?<Loader2 className="animate-spin" size={18}/>:<Upload size={18}/>} {busy?'Reading file…':'Choose Excel file'}</button>
    {fileName&&<p className="text-xs text-slate-500 mt-3">Selected: {fileName}</p>}
   </div></section>
