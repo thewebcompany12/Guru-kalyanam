@@ -16,7 +16,7 @@ export default function SchoolMapPreview({ latitude, longitude, className = '' }
     const dx = (x - cx) * 256, dy = (y - cy) * 256;
     const result: { key: string; url: string; left: number; top: number }[] = [];
     for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
-      result.push({ key: ox + ':' + oy, url: 'https://tile.openstreetmap.org/' + zoom + '/' + (cx + ox) + '/' + (cy + oy) + '.png', left: 256 + ox * 256 - dx, top: 256 + oy * 256 - dy });
+      result.push({ key: ox + ':' + oy, url: 'https://tile.openstreetmap.org/' + zoom + '/' + (cx + ox) + '/' + (cy + oy) + '.png', left: ox * 256 - dx, top: oy * 256 - dy });
     }
     return result;
   }, [lat, lon]);
@@ -28,7 +28,7 @@ export default function SchoolMapPreview({ latitude, longitude, className = '' }
       <span className="absolute bottom-2 right-2 rounded-lg bg-white/95 px-2 py-1 text-xs font-semibold text-slate-700 shadow">Open interactive map ↗</span>
     </a>
     <div className="relative h-72 overflow-hidden" aria-label="Map preview">
-      {tiles.map(tile => <img key={tile.key} src={tile.url} alt="" loading="lazy" draggable={false} className="absolute h-64 w-64 max-w-none" style={{ left: tile.left, top: tile.top }} onError={e => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }}/>)}
+      {tiles.map(tile => <img key={tile.key} src={tile.url} alt="" loading="lazy" draggable={false} className="absolute h-64 w-64 max-w-none" style={{ left: `calc(50% + ${tile.left}px)`, top: `calc(50% + ${tile.top}px)` }} onError={e => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }}/>)}
     </div>
     <div className="border-t bg-white px-3 py-2 text-xs text-slate-500">© OpenStreetMap contributors · Tap preview to open full map</div>
   </div>;
