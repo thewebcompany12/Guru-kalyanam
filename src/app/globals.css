@@ -737,3 +737,41 @@ a:focus-visible,button:focus-visible{outline-color:#9c94ff!important}
   .brand-logo:after,.hero-glow,.hero-glow-two{animation:none!important}
   .card,.metric-card,.quick-action,.nav-item,.nav-item-icon,.mobile-dock-item{transition:none!important}
 }
+
+
+/* Mobile viewport + sticky chrome collision fix */
+html,body{min-height:100%;height:auto;overflow-x:clip}
+body{padding-bottom:calc(96px + env(safe-area-inset-bottom))!important}
+.app-root{min-height:100dvh;min-height:100svh;overflow:visible!important}
+.app-main{
+  min-height:0!important;height:auto!important;max-height:none!important;
+  overflow:visible!important;overflow-y:visible!important;
+  padding-bottom:calc(120px + env(safe-area-inset-bottom))!important;
+  scroll-padding-top:170px;scroll-padding-bottom:calc(120px + env(safe-area-inset-bottom));
+}
+.app-mobile-nav{
+  position:sticky!important;top:0!important;z-index:80!important;
+}
+.mobile-bottom-nav{
+  position:fixed!important;left:12px!important;right:12px!important;
+  bottom:calc(8px + env(safe-area-inset-bottom))!important;
+  z-index:100!important;width:auto!important;
+  max-width:calc(100vw - 24px)!important;
+}
+@media(max-width:1023px){
+  body{padding-bottom:calc(105px + env(safe-area-inset-bottom))!important}
+  .app-root{min-height:100dvh;min-height:100svh}
+  .app-main{
+    height:auto!important;max-height:none!important;overflow:visible!important;
+    padding-top:18px!important;
+    padding-bottom:calc(132px + env(safe-area-inset-bottom))!important;
+  }
+  .app-mobile-nav{position:sticky!important;top:0!important;z-index:80!important}
+  .mobile-bottom-nav{bottom:calc(8px + env(safe-area-inset-bottom))!important}
+  form,.card,section,[role="dialog"]{scroll-margin-top:18px;scroll-margin-bottom:calc(120px + env(safe-area-inset-bottom))}
+  input,select,textarea,button{scroll-margin-top:24px;scroll-margin-bottom:calc(120px + env(safe-area-inset-bottom))}
+}
+@media(max-width:640px){
+  .app-main{padding-top:14px!important;padding-bottom:calc(142px + env(safe-area-inset-bottom))!important}
+  .mobile-bottom-nav{left:8px!important;right:8px!important;max-width:calc(100vw - 16px)!important}
+}
