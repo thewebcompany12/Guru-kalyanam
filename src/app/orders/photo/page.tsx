@@ -87,13 +87,30 @@ export default function PhotoOrderPage() {
         reader.readAsDataURL(file);
       });
       setImageUrl(dataUrl);
-      const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+      let base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+      let uploadMime = file.type === 'image/jpg' ? 'image/jpeg' : file.type;
+      // Compress large phone photos before sending them to the serverless API.
+      try {
+        const bitmap = await createImageBitmap(file);
+        const scale = Math.min(1, 1800 / Math.max(bitmap.width, bitmap.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+        canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+        const context = canvas.getContext('2d');
+        if (context) {
+          context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+          const compressed = canvas.toDataURL('image/jpeg', 0.82);
+          base64 = compressed.slice(compressed.indexOf(',') + 1);
+          uploadMime = 'image/jpeg';
+        }
+        bitmap.close();
+      } catch { /* Some browsers cannot create a bitmap; use the original image. */ }
       let recognized: any = null;
       let aiMessage = '';
       try {
         const response = await fetch('/api/orders/read-photo', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64: base64, mimeType: file.type === 'image/jpg' ? 'image/jpeg' : file.type, schools: schools.map(s => s.name), products: products.map(p => p.name) })
+          body: JSON.stringify({ imageBase64: base64, mimeType: uploadMime, schools: schools.map(s => s.name), products: products.map(p => p.name) })
         });
         const payload = await response.json();
         if (response.ok && payload.result) recognized = payload.result;
