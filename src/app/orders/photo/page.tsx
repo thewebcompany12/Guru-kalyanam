@@ -28,7 +28,8 @@ function similarity(a: string, b: string) {
 
 export default function PhotoOrderPage() {
   const client = useMemo(() => createClient(), []);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const [schools, setSchools] = useState<School[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [schoolId, setSchoolId] = useState('');
@@ -76,9 +77,10 @@ export default function PhotoOrderPage() {
   const readPhoto = async (file?: File) => {
     if (!file) return;
     setError(''); setMessage(''); setItems([]); setOcrText('');
-    if (!file.type.startsWith('image/')) { setError('Choose an image file from your gallery or camera.'); return; }
-    if (file.size > 10 * 1024 * 1024) { setError('This photo is too large. Please choose one under 10 MB.'); return; }
-    setReading(true); setMessage('Loading photo…');
+    const isImage = file.type.startsWith('image/') || /\.(jpe?g|png|webp|heic|heif|bmp|gif)$/i.test(file.name);
+    if (!isImage) { setError('This file is not recognized as a photo. Please take a new photo or choose a JPG/PNG image.'); return; }
+    setImageUrl(URL.createObjectURL(file));
+    setReading(true); setMessage('Photo selected — preparing image…');
     try {
       const dataUrl: string = await new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -86,9 +88,8 @@ export default function PhotoOrderPage() {
         reader.onerror = () => reject(new Error('Could not load this photo. Please choose it again.'));
         reader.readAsDataURL(file);
       });
-      setImageUrl(dataUrl);
       let base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
-      let uploadMime = file.type === 'image/jpg' ? 'image/jpeg' : file.type;
+      let uploadMime = file.type === 'image/jpg' ? 'image/jpeg' : (file.type || 'image/jpeg');
       // Compress large phone photos before sending them to the serverless API.
       try {
         const bitmap = await createImageBitmap(file);
@@ -186,9 +187,10 @@ export default function PhotoOrderPage() {
     <Link href="/orders" className="inline-flex items-center gap-2 text-sm text-slate-500 mb-4"><ArrowLeft size={16}/>Back to orders</Link>
     <header className="mb-6"><p className="text-sm text-emerald-700 font-semibold">Photo order entry</p><h1 className="text-3xl font-bold">Create order from notebook photo</h1><p className="text-slate-500 mt-2">Take a photo or choose one from your gallery. The preview appears immediately; AI recognition is used when configured, with built-in OCR as fallback. Every selected saved item is added once with quantity 1.</p></header>
     <section className="card p-5 mb-5 space-y-4">
-      <div className="flex flex-wrap gap-3 items-center justify-between"><div><h2 className="font-bold">1. Upload order photo</h2><p className="text-sm text-slate-500">Use a clear, well-lit photo with the full page visible.</p></div><button type="button" onClick={() => fileRef.current?.click()} className="rounded-xl bg-emerald-600 text-white px-4 py-3 font-semibold flex gap-2 items-center"><Camera size={18}/>Choose photo</button></div>
-      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" onChange={e => { const file = e.target.files?.[0]; if (file) readPhoto(file); e.currentTarget.value = ''; }}/>
-      {imageUrl ? <img src={imageUrl} alt="Uploaded handwritten order" className="max-h-[420px] max-w-full mx-auto rounded-xl border object-contain"/> : <button type="button" onClick={() => fileRef.current?.click()} className="w-full min-h-36 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-slate-500 gap-2"><FileImage size={30}/><span>Tap to select or take a photo</span></button>}
+      <div className="flex flex-wrap gap-3 items-center justify-between"><div><h2 className="font-bold">1. Upload order photo</h2><p className="text-sm text-slate-500">Use a clear, well-lit photo with the full page visible.</p></div><div className="flex flex-wrap gap-2"><button type="button" onClick={() => cameraRef.current?.click()} className="rounded-xl bg-emerald-600 text-white px-4 py-3 font-semibold flex gap-2 items-center"><Camera size={18}/>Take photo</button><button type="button" onClick={() => galleryRef.current?.click()} className="rounded-xl border border-slate-300 bg-white px-4 py-3 font-semibold flex gap-2 items-center"><FileImage size={18}/>Choose from gallery</button></div></div>
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => { const file = e.target.files?.[0]; if (file) void readPhoto(file); e.currentTarget.value = ''; }}/>
+      <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={e => { const file = e.target.files?.[0]; if (file) void readPhoto(file); e.currentTarget.value = ''; }}/>
+      {imageUrl ? <img src={imageUrl} alt="Uploaded handwritten order" className="max-h-[420px] max-w-full mx-auto rounded-xl border object-contain"/> : <div className="w-full min-h-36 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-slate-500 gap-3 p-4"><FileImage size={30}/><span>Choose how to add the notebook photo</span><div className="flex flex-wrap justify-center gap-2"><button type="button" onClick={() => cameraRef.current?.click()} className="rounded-lg bg-emerald-600 text-white px-4 py-2 font-semibold">Open camera</button><button type="button" onClick={() => galleryRef.current?.click()} className="rounded-lg border px-4 py-2 font-semibold">Open gallery</button></div></div>}
       {reading && <p className="text-sm text-emerald-700 flex gap-2 items-center"><LoaderCircle size={16} className="animate-spin"/>{message || 'Reading photo…'}</p>}
     </section>
     <section className="card p-5 mb-5 space-y-4">
