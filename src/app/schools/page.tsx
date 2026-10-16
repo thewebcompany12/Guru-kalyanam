@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { LocateFixed, Plus, Search, School as SchoolIcon, Trash2, Pencil, MapPin, Navigation, Sparkles, Users } from 'lucide-react';
+import { LocateFixed, Plus, Search, School as SchoolIcon, Trash2, Pencil, MapPin, Navigation, Sparkles, Users, Download } from 'lucide-react';
 import AppNav from '@/components/AppNav';
 import { createClient } from '@/lib/supabase';
 
@@ -43,9 +43,45 @@ export default function SchoolsPage(){
      if(contactWarning)setError(contactWarning);
    }setSaving(false);
  };
+
+ const downloadAllSchoolData=async()=>{
+   setError('');
+   try{
+     const [schoolResult,contactResult,locationResult]=await Promise.all([
+       client.from('schools').select('*').order('name'),
+       client.from('school_contacts').select('*'),
+       client.from('locations').select('*')
+     ]);
+     if(schoolResult.error)throw new Error('Could not export schools: '+schoolResult.error.message);
+     if(contactResult.error)throw new Error('Could not export school contacts: '+contactResult.error.message);
+     if(locationResult.error)throw new Error('Could not export school locations: '+locationResult.error.message);
+     const allSchools=schoolResult.data||[], contacts=contactResult.data||[], locations=locationResult.data||[];
+     const rows:any[]=[];
+     for(const school of allSchools){
+       const schoolContacts=contacts.filter((c:any)=>c.school_id===school.id);
+       const schoolLocations=locations.filter((l:any)=>l.school_id===school.id);
+       const contactRows=schoolContacts.length?schoolContacts:[null];
+       const locationRows=schoolLocations.length?schoolLocations:[null];
+       for(const contact of contactRows)for(const location of locationRows){
+         const row:any={...school};
+         for(const [key,value] of Object.entries(contact||{}))row['contact_'+key]=value;
+         for(const [key,value] of Object.entries(location||{}))row['location_'+key]=value;
+         rows.push(row);
+       }
+     }
+     const headers=Array.from(new Set(rows.flatMap((r:any)=>Object.keys(r))));
+     const csvCell=(value:any)=>{const raw=value==null?'':typeof value==='object'?JSON.stringify(value):String(value);return '"'+raw.replace(/"/g,'""')+'"';};
+     const csv='\\uFEFF'+[headers.map(csvCell).join(','),...rows.map((row:any)=>headers.map(h=>csvCell(row[h])).join(','))].join('\\r\\n');
+     const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+     const url=URL.createObjectURL(blob);const a=document.createElement('a');
+     a.href=url;a.download='guru-kalyanam-school-data-'+new Date().toISOString().slice(0,10)+'.csv';
+     document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+     setError('');
+   }catch(e:any){setError(e?.message||'School data export failed. Please try again.');}
+ };
  const remove=async(id:string)=>{if(!confirm('Delete this school and its related records?'))return;const r=await client.from('schools').delete().eq('id',id);if(r.error)setError(r.error.message);else load()};
  return <div className="min-h-screen flex bg-slate-50"><AppNav/><main className="flex-1 min-w-0 p-4 md:p-8"><div className="max-w-6xl mx-auto animate-fade-up">
-  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6"><div><p className="text-sm font-semibold text-emerald-600 flex items-center gap-1"><Sparkles size={14}/>Field operations</p><h1 className="text-3xl font-bold">Schools</h1><p className="text-sm text-slate-500 mt-1">Save a school once, then open its saved location with one tap.</p></div><div className="flex flex-wrap gap-2"><Link href="/schools/import" className="rounded-xl border border-emerald-200 bg-white text-emerald-800 px-4 py-3 font-semibold flex items-center gap-2 transition hover:-translate-y-0.5"><span>📊</span>Import Excel</Link><button onClick={()=>{setForm(empty);setEditing(null)}} className="rounded-xl bg-gradient-to-r from-emerald-600 to-sky-500 text-white px-4 py-3 font-semibold flex items-center gap-2 shadow-lg shadow-emerald-200 transition hover:-translate-y-0.5"><Plus size={18}/>Add school</button></div></div>
+  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6"><div><p className="text-sm font-semibold text-emerald-600 flex items-center gap-1"><Sparkles size={14}/>Field operations</p><h1 className="text-3xl font-bold">Schools</h1><p className="text-sm text-slate-500 mt-1">Save a school once, then open its saved location with one tap.</p></div><div className="flex flex-wrap gap-2"><button type="button" onClick={downloadAllSchoolData} className="rounded-xl border border-violet-200 bg-white text-violet-800 px-4 py-3 font-semibold flex items-center gap-2 transition hover:-translate-y-0.5"><Download size={17}/>Download all data</button><Link href="/schools/import" className="rounded-xl border border-emerald-200 bg-white text-emerald-800 px-4 py-3 font-semibold flex items-center gap-2 transition hover:-translate-y-0.5"><span>📊</span>Import Excel</Link><button onClick={()=>{setForm(empty);setEditing(null)}} className="rounded-xl bg-gradient-to-r from-emerald-600 to-sky-500 text-white px-4 py-3 font-semibold flex items-center gap-2 shadow-lg shadow-emerald-200 transition hover:-translate-y-0.5"><Plus size={18}/>Add school</button></div></div>
   {error&&<p className="mb-4 rounded-xl bg-red-50 text-red-700 p-3 text-sm animate-fade-up">{error}</p>}
   <div className="grid lg:grid-cols-[360px_1fr] gap-5">
    <form onSubmit={save} className="card p-5 h-fit space-y-3 animate-fade-up"><h2 className="font-bold flex items-center gap-2"><span className="section-icon bg-emerald-100 text-emerald-700"><SchoolIcon size={16}/></span>{editing?'Edit school':'New school'}</h2>
