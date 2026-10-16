@@ -775,3 +775,42 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom))!important}
   .app-main{padding-top:14px!important;padding-bottom:calc(142px + env(safe-area-inset-bottom))!important}
   .mobile-bottom-nav{left:8px!important;right:8px!important;max-width:calc(100vw - 16px)!important}
 }
+
+
+/* Final mobile shell correction: header must stack its brand/search, content must stay visible */
+@media(max-width:1023px){
+  .app-root{
+    display:flex!important;flex-direction:column!important;
+    min-height:100dvh!important;height:auto!important;overflow:visible!important;
+  }
+  .app-mobile-nav{
+    position:relative!important;inset:auto!important;
+    display:flex!important;flex:0 0 auto!important;flex-direction:column!important;
+    align-items:stretch!important;gap:12px!important;
+    width:100%!important;height:auto!important;min-height:0!important;
+    padding:14px 16px 16px!important;
+    padding-top:calc(14px + env(safe-area-inset-top))!important;
+    overflow:visible!important;z-index:80!important;
+    background:rgba(255,255,255,.97)!important;
+  }
+  .app-mobile-nav > div{
+    flex:0 0 auto!important;width:100%!important;min-width:0!important;
+  }
+  .mobile-topline{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important}
+  .mobile-search{display:block!important;width:100%!important;min-width:0!important}
+  .app-main{
+    display:block!important;position:relative!important;flex:1 0 auto!important;
+    width:100%!important;min-width:0!important;max-width:none!important;
+    margin:0!important;height:auto!important;max-height:none!important;
+    overflow:visible!important;visibility:visible!important;
+    padding:18px 16px calc(150px + env(safe-area-inset-bottom))!important;
+  }
+  .mobile-bottom-nav{
+    position:fixed!important;bottom:calc(8px + env(safe-area-inset-bottom))!important;
+    z-index:100!important;
+  }
+}
+@media(max-width:640px){
+  .app-mobile-nav{padding-left:16px!important;padding-right:16px!important}
+  .app-main{padding-left:16px!important;padding-right:16px!important;padding-bottom:calc(155px + env(safe-area-inset-bottom))!important}
+}
