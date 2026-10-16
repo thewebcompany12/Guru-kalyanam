@@ -106,24 +106,35 @@ export default function PhotoOrderPage() {
         }
         bitmap.close();
       } catch { /* Some browsers cannot create a bitmap; use the original image. */ }
+      // Run independent Hindi + English OCR as a second reader, then let Gemini compare both sources.
+      let independentOcrText = '';
+      let tesseractInstance: any = null;
+      try {
+        tesseractInstance = await loadTesseract();
+        const ocrResult = await tesseractInstance.recognize(file, 'eng+hin', {
+          logger: (event: any) => { if (event.status === 'recognizing text') setMessage('Reading handwriting with OCR… ' + Math.round((event.progress || 0) * 100) + '%'); }
+        });
+        independentOcrText = String(ocrResult.data?.text || '').trim();
+      } catch { /* Gemini still gets the photo if independent OCR cannot read this format. */ }
       let recognized: any = null;
       let aiMessage = '';
       try {
         const response = await fetch('/api/orders/read-photo', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64: base64, mimeType: uploadMime, schools: schools.map(s => s.name), products: products.map(p => p.name) })
+          body: JSON.stringify({ imageBase64: base64, mimeType: uploadMime, ocrText: independentOcrText, schools: schools.map(s => s.name), products: products.map(p => p.name) })
         });
         const payload = await response.json();
         if (response.ok && payload.result) recognized = payload.result;
         else aiMessage = payload.error || 'AI photo reading is not configured.';
       } catch { aiMessage = 'AI photo reading is unavailable; trying built-in OCR.'; }
       if (recognized && Array.isArray(recognized.items)) {
-        const fullText = String(recognized.fullText || '');
+        const fullText = [String(recognized.fullText || '').trim(), independentOcrText].filter(Boolean).join('\n\n--- Independent Hindi/English OCR ---\n');
         setOcrText(fullText);
         const schoolName = String(recognized.schoolName || '').trim();
         if (schoolName) {
-          const schoolMatch = schools.map(s => ({ s, score: similarity(schoolName, s.name) })).sort((a, b) => b.score - a.score)[0];
-          if (schoolMatch && schoolMatch.score >= 0.45) setSchoolId(schoolMatch.s.id);
+          const exactSchool = schools.find(s => s.name.trim().toLocaleLowerCase() === schoolName.toLocaleLowerCase());
+          const schoolMatch = exactSchool ? { s: exactSchool, score: 1 } : schools.map(s => ({ s, score: similarity(schoolName, s.name) })).sort((a, b) => b.score - a.score)[0];
+          if (schoolMatch && (schoolMatch.score >= 0.45 || exactSchool)) setSchoolId(schoolMatch.s.id);
         }
         const parsed: RecognizedItem[] = recognized.items.map((item: any) => {
           const raw = String(item.rawText || '').trim();
@@ -134,17 +145,20 @@ export default function PhotoOrderPage() {
           const safeMatch = best && (exact || (confidence >= 0.78 && best.score >= 0.5));
           return { line: raw, productId: safeMatch ? best.p.id : '', confidence };
         }).filter((item: RecognizedItem) => item.line.length > 0);
+        // Keep OCR-only lines too, so the second reader can recover items Gemini missed.
+        const ocrLines = independentOcrText.split(/\r?\n/).map((line: string) => line.replace(/^\s*[\d.)-]+\s*/, '').trim()).filter((line: string) => line.length > 1);
+        for (const line of ocrLines) {
+          if (parsed.some(item => similarity(item.line, line) >= 0.78)) continue;
+          const best = products.map(p => ({ p, score: similarity(line, p.name) })).sort((a, b) => b.score - a.score)[0];
+          parsed.push({ line, productId: best && best.score >= 0.72 ? best.p.id : '', confidence: best?.score || 0 });
+        }
         const seen = new Set<string>();
         setItems(parsed.filter(item => { const key = normalize(item.line); if (!key || seen.has(key)) return false; seen.add(key); return true; }));
-        setMessage('AI read the photo. Confirm the school and every item before saving; uncertain items remain unmatched.');
+        setMessage('Gemini + Hindi/English OCR comparison finished. Confirm the school and items; unmatched lines can be saved as new products.');
         return;
       }
-      setMessage('Preparing built-in OCR…');
-      const Tesseract = await loadTesseract();
-      const result = await Tesseract.recognize(file, 'eng+hin', {
-        logger: (event: any) => { if (event.status === 'recognizing text') setMessage('Reading photo… ' + Math.round((event.progress || 0) * 100) + '%'); }
-      });
-      const text = String(result.data?.text || '').trim();
+      setMessage('Using independent Hindi/English OCR results…');
+      const text = independentOcrText || '';
       setOcrText(text);
       const lines = text.split(/\r?\n/).map((line: string) => line.replace(/^\s*[\d.)-]+\s*/, '').trim()).filter((line: string) => line.length > 1);
       const ranked = lines.map((line: string) => {
@@ -157,6 +171,26 @@ export default function PhotoOrderPage() {
     } catch (e: any) {
       setError((e?.message || 'Could not read this photo.') + ' The preview is kept if it loaded; retry or add items manually.');
     } finally { setReading(false); }
+  };
+
+  const createNewProduct = async (index: number) => {
+    const item = items[index];
+    const name = item?.line.trim();
+    if (!name) { setError('Enter the handwritten item name before creating a new product.'); return; }
+    setError(''); setMessage('');
+    const existing = products.find(p => normalize(p.name) === normalize(name));
+    if (existing) { updateItem(index, { productId: existing.id }); setMessage('Matched the existing saved product: ' + existing.name); return; }
+    const { data, error: insertError } = await client.from('products').insert({
+      name, sku: null, unit: 'piece', purchase_price: 0, selling_price: 0,
+      tax_rate: 0, minimum_stock: 0, category_id: null,
+      notes: 'Created from handwritten school order photo; please review price and details.',
+      active: true
+    }).select('id,name,unit,selling_price,tax_rate').single();
+    if (insertError || !data) { setError(insertError?.message || 'Could not create this new product.'); return; }
+    const product = { ...data, unit: data.unit || 'piece', selling_price: Number(data.selling_price || 0), tax_rate: Number(data.tax_rate || 0) } as Product;
+    setProducts(prev => [...prev, product].sort((a, b) => a.name.localeCompare(b.name)));
+    updateItem(index, { productId: product.id, line: product.name });
+    setMessage('New saved product created: ' + product.name + '. Its price is currently ₹0; update it in Products before using it for billing.');
   };
 
   const saveOrder = async () => {
@@ -200,7 +234,7 @@ export default function PhotoOrderPage() {
     <section className="card p-5 space-y-4">
       <div className="flex items-center justify-between gap-3"><div><h2 className="font-bold">3. Verify items</h2><p className="text-sm text-slate-500">OCR can misread handwriting. Correct the matches before saving.</p></div><button type="button" onClick={addBlank} className="rounded-xl border px-3 py-2 text-sm">+ Add item</button></div>
       {items.length === 0 && <p className="text-sm text-slate-500 rounded-xl bg-slate-50 p-4">No lines detected yet. Upload a photo or add an item manually.</p>}
-      <div className="space-y-3">{items.map((item, index) => <div key={index} className="border rounded-xl p-3 space-y-2"><div className="flex gap-2"><input value={item.line} onChange={e => updateItem(index, { line: e.target.value })} placeholder="Text read from notebook" className="min-w-0 flex-1 border rounded-lg px-3 py-2"/><button type="button" onClick={() => setItems(prev => prev.filter((_, i) => i !== index))} aria-label="Remove item" className="p-2 text-red-600"><Trash2 size={17}/></button></div><select value={item.productId} onChange={e => updateItem(index, { productId: e.target.value })} className="w-full border rounded-lg px-3 py-2 bg-white"><option value="">Choose matching saved item…</option>{products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select><p className="text-xs text-slate-500">Order quantity: <b>1</b> · Price from saved product</p></div>)}</div>
+      <div className="space-y-3">{items.map((item, index) => <div key={index} className="border rounded-xl p-3 space-y-2"><div className="flex gap-2"><input value={item.line} onChange={e => updateItem(index, { line: e.target.value })} placeholder="Text read from notebook" className="min-w-0 flex-1 border rounded-lg px-3 py-2"/><button type="button" onClick={() => setItems(prev => prev.filter((_, i) => i !== index))} aria-label="Remove item" className="p-2 text-red-600"><Trash2 size={17}/></button></div><select value={item.productId} onChange={e => updateItem(index, { productId: e.target.value })} className="w-full border rounded-lg px-3 py-2 bg-white"><option value="">Choose matching saved item…</option>{products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select><p className="text-xs text-slate-500">Order quantity: <b>1</b> · Price from saved product</p>{!item.productId && item.line.trim() && <button type="button" onClick={() => void createNewProduct(index)} className="rounded-lg bg-amber-50 border border-amber-200 text-amber-900 px-3 py-2 text-sm font-semibold">+ Save “{item.line.trim()}” as a new product</button>}</div>)}</div>
       {ocrText && <details className="text-sm"><summary className="cursor-pointer font-semibold text-slate-600">Show full OCR text</summary><textarea value={ocrText} onChange={e => setOcrText(e.target.value)} rows={5} className="mt-2 w-full border rounded-xl p-3"/></details>}
       {error && <p className="rounded-xl bg-red-50 text-red-700 p-3 text-sm">{error}</p>}
       {message && !reading && <p className="rounded-xl bg-emerald-50 text-emerald-800 p-3 text-sm flex gap-2 items-start"><CheckCircle2 size={17} className="shrink-0 mt-0.5"/>{message}</p>}
