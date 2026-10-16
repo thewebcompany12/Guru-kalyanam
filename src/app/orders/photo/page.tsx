@@ -76,10 +76,52 @@ export default function PhotoOrderPage() {
   const readPhoto = async (file?: File) => {
     if (!file) return;
     setError(''); setMessage(''); setItems([]); setOcrText('');
-    if (imageUrl) URL.revokeObjectURL(imageUrl);
-    setImageUrl(URL.createObjectURL(file));
-    setReading(true);
+    if (!file.type.startsWith('image/')) { setError('Choose an image file from your gallery or camera.'); return; }
+    if (file.size > 10 * 1024 * 1024) { setError('This photo is too large. Please choose one under 10 MB.'); return; }
+    setReading(true); setMessage('Loading photo…');
     try {
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Could not load this photo.'));
+        reader.onerror = () => reject(new Error('Could not load this photo. Please choose it again.'));
+        reader.readAsDataURL(file);
+      });
+      setImageUrl(dataUrl);
+      const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+      let recognized: any = null;
+      let aiMessage = '';
+      try {
+        const response = await fetch('/api/orders/read-photo', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: base64, mimeType: file.type === 'image/jpg' ? 'image/jpeg' : file.type, schools: schools.map(s => s.name), products: products.map(p => p.name) })
+        });
+        const payload = await response.json();
+        if (response.ok && payload.result) recognized = payload.result;
+        else aiMessage = payload.error || 'AI photo reading is not configured.';
+      } catch { aiMessage = 'AI photo reading is unavailable; trying built-in OCR.'; }
+      if (recognized && Array.isArray(recognized.items)) {
+        const fullText = String(recognized.fullText || '');
+        setOcrText(fullText);
+        const schoolName = String(recognized.schoolName || '').trim();
+        if (schoolName) {
+          const schoolMatch = schools.map(s => ({ s, score: similarity(schoolName, s.name) })).sort((a, b) => b.score - a.score)[0];
+          if (schoolMatch && schoolMatch.score >= 0.45) setSchoolId(schoolMatch.s.id);
+        }
+        const parsed: RecognizedItem[] = recognized.items.map((item: any) => {
+          const raw = String(item.rawText || '').trim();
+          const chosenName = String(item.productName || '').trim();
+          const exact = products.find(p => p.name.toLowerCase() === chosenName.toLowerCase());
+          const best = exact ? { p: exact, score: 1 } : products.map(p => ({ p, score: similarity(raw, p.name) })).sort((a, b) => b.score - a.score)[0];
+          const confidence = Number(item.confidence || best?.score || 0);
+          const safeMatch = best && (exact || (confidence >= 0.78 && best.score >= 0.5));
+          return { line: raw, productId: safeMatch ? best.p.id : '', confidence };
+        }).filter((item: RecognizedItem) => item.line.length > 0);
+        const seen = new Set<string>();
+        setItems(parsed.filter(item => { const key = normalize(item.line); if (!key || seen.has(key)) return false; seen.add(key); return true; }));
+        setMessage('AI read the photo. Confirm the school and every item before saving; uncertain items remain unmatched.');
+        return;
+      }
+      setMessage('Preparing built-in OCR…');
       const Tesseract = await loadTesseract();
       const result = await Tesseract.recognize(file, 'eng+hin', {
         logger: (event: any) => { if (event.status === 'recognizing text') setMessage('Reading photo… ' + Math.round((event.progress || 0) * 100) + '%'); }
@@ -89,20 +131,13 @@ export default function PhotoOrderPage() {
       const lines = text.split(/\r?\n/).map((line: string) => line.replace(/^\s*[\d.)-]+\s*/, '').trim()).filter((line: string) => line.length > 1);
       const ranked = lines.map((line: string) => {
         const match = products.map(p => ({ p, score: similarity(line, p.name) })).sort((a, b) => b.score - a.score)[0];
-        return { line, productId: match && match.score >= 0.32 ? match.p.id : '', confidence: match?.score || 0 };
+        return { line, productId: match && match.score >= 0.72 ? match.p.id : '', confidence: match?.score || 0 };
       });
       const seen = new Set<string>();
-      setItems(ranked.filter((item: RecognizedItem) => {
-        const key = normalize(item.line);
-        if (seen.has(key)) return false;
-        seen.add(key); return true;
-      }));
-      const normalizedText = normalize(text);
-      const schoolMatches = schools.map(s => ({ s, score: similarity(normalizedText, s.name) })).sort((a, b) => b.score - a.score);
-      if (schoolMatches[0] && schoolMatches[0].score >= 0.18) setSchoolId(schoolMatches[0].s.id);
-      setMessage('Photo read. Please verify the school and every item before creating the order.');
+      setItems(ranked.filter((item: RecognizedItem) => { const key = normalize(item.line); if (!key || seen.has(key)) return false; seen.add(key); return true; }));
+      setMessage((aiMessage ? aiMessage + ' ' : '') + 'Built-in OCR finished. Match any unclear products manually.');
     } catch (e: any) {
-      setError(e?.message || 'Could not read this photo. You can still add items manually below.');
+      setError((e?.message || 'Could not read this photo.') + ' The preview is kept if it loaded; retry or add items manually.');
     } finally { setReading(false); }
   };
 
@@ -132,10 +167,10 @@ export default function PhotoOrderPage() {
 
   return <div className="min-h-screen flex bg-slate-50"><AppNav/><main className="flex-1 min-w-0 p-4 md:p-8"><div className="max-w-4xl mx-auto">
     <Link href="/orders" className="inline-flex items-center gap-2 text-sm text-slate-500 mb-4"><ArrowLeft size={16}/>Back to orders</Link>
-    <header className="mb-6"><p className="text-sm text-emerald-700 font-semibold">Photo order entry</p><h1 className="text-3xl font-bold">Create order from notebook photo</h1><p className="text-slate-500 mt-2">Write the school name at the top of the page, then upload one clear photo. Every matched saved item is added once with quantity 1.</p></header>
+    <header className="mb-6"><p className="text-sm text-emerald-700 font-semibold">Photo order entry</p><h1 className="text-3xl font-bold">Create order from notebook photo</h1><p className="text-slate-500 mt-2">Take a photo or choose one from your gallery. The preview appears immediately; AI recognition is used when configured, with built-in OCR as fallback. Every selected saved item is added once with quantity 1.</p></header>
     <section className="card p-5 mb-5 space-y-4">
       <div className="flex flex-wrap gap-3 items-center justify-between"><div><h2 className="font-bold">1. Upload order photo</h2><p className="text-sm text-slate-500">Use a clear, well-lit photo with the full page visible.</p></div><button type="button" onClick={() => fileRef.current?.click()} className="rounded-xl bg-emerald-600 text-white px-4 py-3 font-semibold flex gap-2 items-center"><Camera size={18}/>Choose photo</button></div>
-      <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => readPhoto(e.target.files?.[0])}/>
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" onChange={e => { const file = e.target.files?.[0]; if (file) readPhoto(file); e.currentTarget.value = ''; }}/>
       {imageUrl ? <img src={imageUrl} alt="Uploaded handwritten order" className="max-h-[420px] max-w-full mx-auto rounded-xl border object-contain"/> : <button type="button" onClick={() => fileRef.current?.click()} className="w-full min-h-36 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-slate-500 gap-2"><FileImage size={30}/><span>Tap to select or take a photo</span></button>}
       {reading && <p className="text-sm text-emerald-700 flex gap-2 items-center"><LoaderCircle size={16} className="animate-spin"/>{message || 'Reading photo…'}</p>}
     </section>
