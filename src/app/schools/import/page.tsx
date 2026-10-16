@@ -30,11 +30,17 @@ export default function SchoolExcelImportPage(){
  const [busy,setBusy]=useState(false),[saving,setSaving]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
  const processingInput=useRef(false);
  function onExcelInput(input:HTMLInputElement){
-  const file=input.files?.[0];
-  if(!file){setError('No file was received. Tap Choose Excel file, select the spreadsheet, then confirm Open/Select in the phone picker.');return;}
+  // Use the standard change event only; some mobile browsers fire both
+  // input and change, which can race while the workbook is being parsed.
+  const file=input.files?.item(0);
+  if(!file){setError('The phone did not provide a file. Choose the spreadsheet in Files or Downloads, then tap Open or Use this file.');return;}
   if(processingInput.current)return;
-  processingInput.current=true;setError('');setFileName(file.name);
-  void handleFile(file).finally(()=>{input.value='';processingInput.current=false;});
+  processingInput.current=true;
+  setError('');setMessage('');setFileName(file.name||'Selected spreadsheet');
+  void handleFile(file).catch(e=>{
+    setRows([]);setHeaders([]);
+    setError(e instanceof Error?e.message:'Could not open this spreadsheet. Save a local copy and try again.');
+  }).finally(()=>{input.value='';processingInput.current=false;});
  }
 
  const validRows=useMemo(()=>rows.filter(r=>String(r[mapping.name]||'').trim()),[rows,mapping]);
@@ -159,7 +165,7 @@ export default function SchoolExcelImportPage(){
   <section className="card p-5 md:p-6 mb-5"><div onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();handleFile(e.dataTransfer.files?.[0])}} className="rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/50 p-7 md:p-10 text-center">
    <span className="section-icon bg-emerald-100 text-emerald-700 mx-auto mb-3"><FileSpreadsheet size={24}/></span><h2 className="font-bold text-lg">Upload your school Excel sheet</h2><p className="text-sm text-slate-500 mt-1">Excel workbook (.xlsx / .xls) or CSV. The first worksheet is used.</p>
    <p className="text-sm text-slate-600 mt-3">On mobile, select the file and confirm <strong>Open</strong> or <strong>Use this file</strong> in the file picker.</p>
-   <input type="file" aria-label="Choose Excel or CSV file" accept=".xlsx,.xls,.xlsm,.xlsb,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.ms-excel.sheet.binary.macroEnabled.12,text/csv" disabled={busy} className="block w-full max-w-xl mx-auto mt-4 rounded-xl border border-emerald-200 bg-white p-3 text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-4 file:py-3 file:font-semibold file:text-white disabled:opacity-60" onClick={e=>{e.currentTarget.value='';setError('');setMessage('');}} onInput={e=>onExcelInput(e.currentTarget)} onChange={e=>onExcelInput(e.currentTarget)}/>
+   <input type="file" aria-label="Choose Excel or CSV file" accept=".xlsx,.xls,.xlsm,.xlsb,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.ms-excel.sheet.binary.macroEnabled.12,text/csv" disabled={busy} className="block w-full max-w-xl mx-auto mt-4 rounded-xl border border-emerald-200 bg-white p-3 text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-4 file:py-3 file:font-semibold file:text-white disabled:opacity-60" onClick={e=>{e.currentTarget.value='';setError('');setMessage('');setFileName('');setRows([]);setHeaders([]);}} onChange={e=>onExcelInput(e.currentTarget)}/>
    {busy&&<p className="text-sm font-medium text-emerald-700 mt-3"><Loader2 className="inline animate-spin mr-2" size={16}/>Reading {fileName||'selected file'}…</p>}
    {fileName&&!busy&&<p className="text-xs text-slate-600 mt-3">Selected file: <strong>{fileName}</strong></p>}
   </div></section>
